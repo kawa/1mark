@@ -1,18 +1,53 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/kawa/1mark/schemas/evidence.schema.json",
-  "title": "Evidence item",
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["schema_version", "id", "task_id", "source", "collected_at", "claim", "synthetic"],
+  "title": "Evidence bundle: observed facts and inferences kept separate",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "evidence_id", "race_id", "observations", "inferences", "missing_data", "synthetic"],
   "properties": {
     "schema_version": {"const": "1.0.0"},
-    "id": {"type": "string", "minLength": 1},
-    "task_id": {"type": "string", "minLength": 1},
-    "source": {"type": "string", "minLength": 1},
-    "collected_at": {"type": "string", "format": "date-time"},
-    "claim": {"type": "string", "minLength": 1},
-    "reliability": {"enum": ["low", "medium", "high"]},
-    "synthetic": {"type": "boolean", "description": "true for fabricated example data"}
+    "evidence_id": {"$ref": "_defs.schema.json#/$defs/id"},
+    "race_id": {"$ref": "_defs.schema.json#/$defs/race_id"},
+    "synthetic": {"type": "boolean"},
+    "observations": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "field", "value", "source_url", "observed_at", "phase"],
+        "properties": {
+          "id": {"$ref": "_defs.schema.json#/$defs/id"},
+          "field": {"$ref": "_defs.schema.json#/$defs/text"},
+          "boat": {"$ref": "_defs.schema.json#/$defs/boat"},
+          "value": {"type": ["string", "number", "boolean"]},
+          "source_url": {"type": "string", "format": "uri", "pattern": "^https?://"},
+          "observed_at": {"$ref": "_defs.schema.json#/$defs/timestamp"},
+          "phase": {"enum": ["pre_race", "post_race"]}
+        }
+      }
+    },
+    "inferences": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "statement", "based_on"],
+        "properties": {
+          "id": {"$ref": "_defs.schema.json#/$defs/id"},
+          "statement": {"$ref": "_defs.schema.json#/$defs/text"},
+          "based_on": {"type": "array", "minItems": 1, "items": {"$ref": "_defs.schema.json#/$defs/id"}, "description": "Observation ids"}
+        }
+      }
+    },
+    "missing_data": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["field", "reason"],
+        "properties": {
+          "field": {"$ref": "_defs.schema.json#/$defs/text"},
+          "boat": {"$ref": "_defs.schema.json#/$defs/boat"},
+          "reason": {"$ref": "_defs.schema.json#/$defs/text"}
+        }
+      }
+    }
   }
 }

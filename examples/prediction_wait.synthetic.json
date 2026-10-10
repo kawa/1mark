@@ -1,18 +1,108 @@
 {
   "schema_version": "1.0.0",
   "protocol_version": "1.0.0",
-  "task_id": "SYNTHETIC-001",
+  "knowledge_version": "none",
+  "task_id": "SYN-TASK-1",
+  "race_id": "20000101-01-01",
+  "evidence_id": "SYN-EV-1",
+  "locked_at": "2000-01-01T14:45:00+09:00",
   "synthetic": true,
+  "prediction_id": "SYN-PRED-WAIT",
   "status": "WAIT",
-  "prediction": {
-    "outcome": "Team A wins",
-    "probability": 0.6,
-    "rationale": "SYNTHETIC example rationale"
-  },
-  "change_conditions": [
+  "boat_assessments": [
     {
-      "condition": "Key player ruled out",
-      "effect": "Lower probability to 0.5"
+      "boat": 1,
+      "win_probability": 0.45,
+      "rationale": "SYNTHETIC rationale for boat 1",
+      "evidence_ids": [
+        "o1",
+        "i1"
+      ]
+    },
+    {
+      "boat": 2,
+      "win_probability": 0.2,
+      "rationale": "SYNTHETIC rationale for boat 2",
+      "evidence_ids": []
+    },
+    {
+      "boat": 3,
+      "win_probability": 0.1,
+      "rationale": "SYNTHETIC rationale for boat 3",
+      "evidence_ids": []
+    },
+    {
+      "boat": 4,
+      "win_probability": 0.15,
+      "rationale": "SYNTHETIC rationale for boat 4",
+      "evidence_ids": []
+    },
+    {
+      "boat": 5,
+      "win_probability": 0.06,
+      "rationale": "SYNTHETIC rationale for boat 5",
+      "evidence_ids": []
+    },
+    {
+      "boat": 6,
+      "win_probability": 0.04,
+      "rationale": "SYNTHETIC rationale for boat 6",
+      "evidence_ids": []
+    }
+  ],
+  "bets": [
+    {
+      "bet_type": "trifecta",
+      "combination": [
+        1,
+        2,
+        4
+      ],
+      "units": 3
+    },
+    {
+      "bet_type": "trio",
+      "combination": [
+        1,
+        2,
+        4
+      ],
+      "units": 2
+    }
+  ],
+  "wait_plan": [
+    {
+      "observation": {
+        "field": "exhibition_time",
+        "boat": 1,
+        "source": "official exhibition"
+      },
+      "decision_threshold": "boat 1 exhibition time slower than 6.90 and slowest of six boats",
+      "expected_change": {
+        "description": "SYNTHETIC: drop boat-1-first trifecta, add boat 2 first",
+        "remove_bets": [
+          {
+            "bet_type": "trifecta",
+            "combination": [
+              1,
+              2,
+              4
+            ],
+            "units": 3
+          }
+        ],
+        "add_bets": [
+          {
+            "bet_type": "trifecta",
+            "combination": [
+              2,
+              1,
+              4
+            ],
+            "units": 3
+          }
+        ]
+      }
     }
   ]
 }

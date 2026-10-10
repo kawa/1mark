@@ -1,8 +1,13 @@
 {
   "schema_version": "1.0.0",
   "protocol_version": "1.0.0",
-  "task_id": "SYNTHETIC-001",
+  "knowledge_version": "none",
+  "task_id": "SYN-TASK-1",
+  "race_id": "20000101-01-01",
+  "evidence_id": "SYN-EV-1",
+  "locked_at": "2000-01-01T14:45:00+09:00",
   "synthetic": true,
+  "prediction_id": "SYN-PRED-UNAV",
   "status": "UNAVAILABLE",
-  "reason": "SYNTHETIC: event cancelled"
+  "unavailable_reason": "SYNTHETIC: race cancelled"
 }

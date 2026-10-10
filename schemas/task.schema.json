@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kawa/1mark/schemas/task.schema.json",
+  "title": "Task: one race to predict or review",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "task_id", "task_type", "race_id", "scheduled_start", "prediction_cutoff", "synthetic"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "task_id": {"$ref": "_defs.schema.json#/$defs/id"},
+    "task_type": {"enum": ["predict", "review"]},
+    "race_id": {"$ref": "_defs.schema.json#/$defs/race_id"},
+    "scheduled_start": {"$ref": "_defs.schema.json#/$defs/timestamp"},
+    "prediction_cutoff": {"$ref": "_defs.schema.json#/$defs/timestamp", "description": "No evidence observed after this may be used; must be <= scheduled_start"},
+    "synthetic": {"type": "boolean"}
+  }
+}

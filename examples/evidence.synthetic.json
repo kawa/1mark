@@ -1,10 +1,49 @@
 {
   "schema_version": "1.0.0",
-  "id": "SYNTHETIC-EV-1",
-  "task_id": "SYNTHETIC-001",
-  "source": "synthetic",
-  "collected_at": "2026-01-01T00:00:00Z",
-  "claim": "SYNTHETIC claim",
-  "reliability": "low",
-  "synthetic": true
+  "evidence_id": "SYN-EV-1",
+  "race_id": "20000101-01-01",
+  "synthetic": true,
+  "observations": [
+    {
+      "id": "o1",
+      "field": "national_win_rate",
+      "value": 7.1,
+      "source_url": "https://example.invalid/synthetic/o1",
+      "observed_at": "2000-01-01T14:00:00+09:00",
+      "phase": "pre_race",
+      "boat": 1
+    },
+    {
+      "id": "o2",
+      "field": "national_win_rate",
+      "value": 4.2,
+      "source_url": "https://example.invalid/synthetic/o2",
+      "observed_at": "2000-01-01T14:00:00+09:00",
+      "phase": "pre_race",
+      "boat": 4
+    },
+    {
+      "id": "o3",
+      "field": "wind_speed_mps",
+      "value": 2,
+      "source_url": "https://example.invalid/synthetic/o3",
+      "observed_at": "2000-01-01T14:00:00+09:00",
+      "phase": "pre_race"
+    }
+  ],
+  "inferences": [
+    {
+      "id": "i1",
+      "statement": "SYNTHETIC: boat 1 likely strong from the inside course",
+      "based_on": [
+        "o1"
+      ]
+    }
+  ],
+  "missing_data": [
+    {
+      "field": "exhibition_time",
+      "reason": "SYNTHETIC: exhibition not yet held"
+    }
+  ]
 }

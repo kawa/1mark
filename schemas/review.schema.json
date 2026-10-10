@@ -1,20 +1,58 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/kawa/1mark/schemas/review.schema.json",
-  "title": "Review record (post-outcome)",
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["schema_version", "protocol_version", "task_id", "prediction_status", "outcome", "prediction_assessment", "synthetic"],
+  "title": "Review of a locked prediction against the actual result",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "protocol_version", "review_id", "prediction_id", "prediction_sha256", "race_id", "result", "outcome", "prediction_error", "decision_quality", "protocol_compliance", "learning_proposal_ids", "synthetic"],
   "properties": {
     "schema_version": {"const": "1.0.0"},
-    "protocol_version": {"type": "string", "minLength": 1},
-    "task_id": {"type": "string", "minLength": 1},
-    "prediction_status": {"enum": ["PRE", "WAIT", "SKIP", "UNAVAILABLE", "INCOMPLETE"]},
-    "outcome": {"type": "string", "minLength": 1},
-    "prediction_assessment": {"type": "string", "minLength": 1, "description": "Quality of the prediction, independent of money result"},
-    "risk_assessment": {"type": "string", "description": "Staking review, kept separate from prediction_assessment"},
-    "result_units": {"type": "number"},
-    "learning_proposal_ids": {"type": "array", "items": {"type": "string"}},
+    "protocol_version": {"$ref": "_defs.schema.json#/$defs/semver"},
+    "review_id": {"$ref": "_defs.schema.json#/$defs/id"},
+    "prediction_id": {"$ref": "_defs.schema.json#/$defs/id"},
+    "prediction_sha256": {"$ref": "_defs.schema.json#/$defs/sha256"},
+    "race_id": {"$ref": "_defs.schema.json#/$defs/race_id"},
+    "result": {
+      "type": "object", "additionalProperties": false,
+      "required": ["finish_order", "source_url", "confirmed_at"],
+      "properties": {
+        "finish_order": {"$ref": "_defs.schema.json#/$defs/combination", "description": "Boats finishing 1st, 2nd, 3rd"},
+        "source_url": {"type": "string", "pattern": "^https?://"},
+        "confirmed_at": {"$ref": "_defs.schema.json#/$defs/timestamp"}
+      }
+    },
+    "outcome": {
+      "type": "object", "additionalProperties": false,
+      "required": ["bet_results"],
+      "description": "Facts only: which locked bets hit. Computed deterministically.",
+      "properties": {
+        "bet_results": {"type": "array", "items": {"type": "object", "additionalProperties": false,
+          "required": ["bet_type", "combination", "hit"],
+          "properties": {"bet_type": {"$ref": "_defs.schema.json#/$defs/bet_type"}, "combination": {"$ref": "_defs.schema.json#/$defs/combination"}, "hit": {"type": "boolean"}}}}
+      }
+    },
+    "prediction_error": {
+      "type": "object", "additionalProperties": false,
+      "required": ["summary", "boat_errors"],
+      "description": "How the probabilistic view differed from reality, independent of bets.",
+      "properties": {
+        "summary": {"$ref": "_defs.schema.json#/$defs/text"},
+        "boat_errors": {"type": "array", "items": {"type": "object", "additionalProperties": false,
+          "required": ["boat", "note"], "properties": {"boat": {"$ref": "_defs.schema.json#/$defs/boat"}, "note": {"$ref": "_defs.schema.json#/$defs/text"}}}}
+      }
+    },
+    "decision_quality": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rating", "rationale"],
+      "description": "Was the decision sound given information available at lock time, regardless of result.",
+      "properties": {"rating": {"enum": ["good", "acceptable", "poor"]}, "rationale": {"$ref": "_defs.schema.json#/$defs/text"}}
+    },
+    "protocol_compliance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["checks"],
+      "properties": {"checks": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false,
+        "required": ["rule", "passed"], "properties": {"rule": {"$ref": "_defs.schema.json#/$defs/text"}, "passed": {"type": "boolean"}, "note": {"type": "string"}}}}}
+    },
+    "learning_proposal_ids": {"type": "array", "items": {"$ref": "_defs.schema.json#/$defs/id"}},
     "synthetic": {"type": "boolean"}
   }
 }

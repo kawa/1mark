@@ -14,3 +14,4 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - run: pytest
+      - run: python -m onemark.validate examples/*.json

@@ -1,9 +1,13 @@
 {
   "schema_version": "1.0.0",
-  "id": "SYNTHETIC-LP-1",
-  "proposal": "SYNTHETIC: check lineups earlier",
-  "source_review_ids": [
-    "SYNTHETIC-001"
+  "proposal_id": "SYN-LP-1",
+  "target": "knowledge",
+  "proposal": "SYNTHETIC: review weighting of boat 4 when exhibition time is strong",
+  "evidence": [
+    {
+      "review_id": "SYN-REV-1",
+      "observation": "boat 4 finished 2nd at 0.15 probability"
+    }
   ],
   "status": "proposed",
   "synthetic": true

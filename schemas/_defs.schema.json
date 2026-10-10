@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kawa/1mark/schemas/_defs.schema.json",
+  "title": "Shared kyotei definitions",
+  "$defs": {
+    "semver": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+    "timestamp": {"type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"},
+    "race_id": {"type": "string", "pattern": "^\\d{8}-(0[1-9]|1\\d|2[0-4])-(0[1-9]|1[0-2])$", "description": "YYYYMMDD-JCD-RR: date, venue code 01-24, race number 01-12"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+    "text": {"type": "string", "minLength": 1},
+    "boat": {"type": "integer", "minimum": 1, "maximum": 6},
+    "combination": {
+      "type": "array", "minItems": 3, "maxItems": 3, "uniqueItems": true,
+      "items": {"$ref": "#/$defs/boat"},
+      "description": "3 distinct boats. trifecta (3連単): ordered 1st,2nd,3rd. trio (3連複): ascending order (checked by onemark.validate)."
+    },
+    "bet_type": {"enum": ["trifecta", "trio"]},
+    "units": {"type": "integer", "minimum": 1, "maximum": 100, "description": "Bankroll-independent integer units"},
+    "stake_jpy": {"type": "integer", "minimum": 100, "multipleOf": 100, "description": "Kyotei stakes are multiples of 100 yen"},
+    "bet": {
+      "type": "object", "additionalProperties": false,
+      "required": ["bet_type", "combination", "units"],
+      "properties": {
+        "bet_type": {"$ref": "#/$defs/bet_type"},
+        "combination": {"$ref": "#/$defs/combination"},
+        "units": {"$ref": "#/$defs/units"}
+      }
+    }
+  }
+}
