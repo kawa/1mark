@@ -31,6 +31,8 @@ You are a stateless AI session in ONE conversation. Do not rely on prior convers
 ## Stage 1: PRE predictions for all 12 races
 1. Discover packages: every `race-NN/*.zip` listed in `manifest.json` (`races`). Each is independent; open each one
    and follow its own `START_HERE.md` / `protocol.md` exactly. This file adds no prediction rules.
+   Races in `manifest.json` `failed_races` (ingestion stage + error) or `missing_races` have no package: report each as
+   `processing: FAILED` with that stage and error. Never treat them as SKIP and never predict them from memory.
 2. Analyze EVERY race using only its package. Never require exhibition data for the initial prediction.
 3. Produce one prediction JSON per race (PRE or SKIP; combinations, units, reasoning), validated against `prediction.schema.json`.
 4. Produce one `batch_summary` JSON (`batch_summary.schema.json`): per race the status (PRE/SKIP), combinations, units,
@@ -39,7 +41,9 @@ You are a stateless AI session in ONE conversation. Do not rely on prior convers
    otherwise `unknown`. Never invent a time and never present an estimate as official. Do not ask the user for per-race times.
 5. A race you could not process is `processing: FAILED` with `failure.stage` and `failure.error`. Never report it as SKIP,
    and do not guess a status. Report these races explicitly in the text summary too.
-6. Show the user a concise table of the summary. Prediction units are independent of bankroll.
+6. Show the user a concise table of the summary (race, PRE/SKIP, combinations, units, exhibition time with its
+   official / estimated / unknown label, data limitations, failed races). Prediction units are independent of bankroll.
+7. Then STOP and wait for the user. Do not start exhibition follow-ups on your own.
 
 ## Stage 2: user decides
 The user buys PRE predictions they want now and chooses which others to hold (WAIT) for exhibition.
@@ -229,7 +233,16 @@ def build_batch_zip(batch_dir, out, batch_id=None):
             raise ValueError(f"race-{rno:02d} has multiple package ZIPs; keep exactly one")
         if found:
             packages[rno] = found[0]
+    if not packages:
+        raise ValueError("no race packages found; nothing to bundle")
     files = {f"race-{n:02d}/{p.name}": p.read_bytes() for n, p in packages.items()}
+    failed = {}
+    summary_path = batch_dir / "batch-summary.json"
+    if summary_path.exists():
+        files["ingestion-summary.json"] = summary_path.read_bytes()
+        for r in json.loads(summary_path.read_text(encoding="utf-8")).get("races", []):
+            if r.get("status") == "failed":
+                failed[f"{r['rno']:02d}"] = {"stage": r.get("failure_stage"), "error": r.get("error")}
     for name, src in (("workflow_state.schema.json", v.SCHEMA_DIR), ("exhibition_revision.schema.json", v.SCHEMA_DIR),
                       ("batch_summary.schema.json", v.SCHEMA_DIR), ("prediction.schema.json", v.SCHEMA_DIR),
                       ("_defs.schema.json", v.SCHEMA_DIR)):
@@ -238,6 +251,7 @@ def build_batch_zip(batch_dir, out, batch_id=None):
     manifest = {
         "batch_id": batch_id or batch_dir.name,
         "races": {f"{n:02d}": f"race-{n:02d}/{p.name}" for n, p in packages.items()},
+        "failed_races": failed,
         "missing_races": [f"{n:02d}" for n in range(1, 13) if n not in packages],
         "exhibition_offset_minutes_default": DEFAULT_EXHIBITION_OFFSET_MINUTES,
         "files": {k: {"sha256": pkg.sha256(d), "bytes": len(d)} for k, d in sorted(files.items())},
@@ -295,7 +309,11 @@ def main(argv=None):
     ap.add_argument("batch_dir")
     ap.add_argument("--out", default="batch-package.zip")
     a = ap.parse_args(argv)
-    m = build_batch_zip(a.batch_dir, a.out)
+    try:
+        m = build_batch_zip(a.batch_dir, a.out)
+    except ValueError as e:
+        print(f"ERROR {e}", file=sys.stderr)
+        return 2
     if m["missing_races"]:
         print(f"WARNING races without a package (report as not processed, not SKIP): {m['missing_races']}", file=sys.stderr)
     print(f"wrote {a.out}")

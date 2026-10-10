@@ -203,3 +203,41 @@ def test_check_revision_cli(tmp_path, capsys):
     args[4] = f("r.json", load("exhibition_revision_changed"))
     assert wf.main(args) == 1
     assert wf.main(["check-revision", "--baseline", "/nonexistent", "--revision", "x"]) == 1
+
+
+def _ingested(tmp_path, ok=(1, 2), failed=(3,)):
+    from onemark import package as p
+    for n in ok:
+        d = tmp_path / f"race-{n:02d}"
+        d.mkdir()
+        p.write_zip(p.build_files(EX / "evidence.synthetic.json"), d / f"prediction-package-x{n}.zip")
+    races = [{"rno": n, "status": "success"} for n in ok] + \
+            [{"rno": n, "status": "failed", "failure_stage": "retrieval", "error": "SYNTHETIC 404"} for n in failed]
+    (tmp_path / "batch-summary.json").write_text(json.dumps({"races": races}))
+
+
+def test_batch_zip_partial_failure_reported(tmp_path):
+    _ingested(tmp_path)
+    out = tmp_path / "b.zip"
+    m = wf.build_batch_zip(tmp_path, out)
+    z = zipfile.ZipFile(out)
+    assert m["failed_races"] == {"03": {"stage": "retrieval", "error": "SYNTHETIC 404"}}
+    assert "03" in m["missing_races"] and "01" not in m["missing_races"]
+    assert "ingestion-summary.json" in z.namelist()
+    assert json.loads(z.read("manifest.json"))["failed_races"] == m["failed_races"]
+    text = z.read("START_HERE.md").decode()
+    assert "failed_races" in text and "wait for the user" in text.lower() and "estimated" in text
+
+
+def test_batch_zip_cli_and_empty_batch(tmp_path, capsys):
+    assert wf.main([str(tmp_path), "--out", str(tmp_path / "x.zip")]) == 2
+    _ingested(tmp_path)
+    assert wf.main([str(tmp_path), "--out", str(tmp_path / "x.zip")]) == 0
+    assert "03" in capsys.readouterr().err
+
+
+def test_workflow_invokes_batch_zip_and_uploads_it():
+    text = (EX.parent / ".github" / "workflows" / "boatrace-batch.yml").read_text()
+    assert "python -m onemark.workflow batch-out" in text
+    assert text.count("actions/upload-artifact@v4") == 2 and "batch-upload/" in text and "path: batch-out/" in text
+    assert "|| status=$?" in text  # partial failures must not skip the ZIP step

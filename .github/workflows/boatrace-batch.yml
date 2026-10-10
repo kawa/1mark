@@ -21,13 +21,31 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - name: Fetch, validate and package races 1-12
+        id: ingest
         env:
           IN_DATE: ${{ inputs.date }}
           IN_JCD: ${{ inputs.jcd }}
-        run: python -m onemark.batch --date "$IN_DATE" --jcd "$IN_JCD" --out-dir batch-out
+        run: |
+          status=0
+          python -m onemark.batch --date "$IN_DATE" --jcd "$IN_JCD" --out-dir batch-out || status=$?
+          if [ "$status" -eq 1 ]; then
+            echo "::warning::Some races failed; they are listed in the batch ZIP manifest as failed_races"
+          elif [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
+      - name: Build the batch ZIP (one upload for a fresh AI conversation)
+        run: |
+          python -m onemark.workflow batch-out --out batch-out/batch-package.zip
+          mkdir batch-upload
+          unzip -q batch-out/batch-package.zip -d batch-upload
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: boatrace-batch-${{ inputs.date }}-${{ inputs.jcd }}
           path: batch-out/
           if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        with:
+          name: boatrace-batch-package-${{ inputs.date }}-${{ inputs.jcd }}
+          path: batch-upload/
+          if-no-files-found: error
