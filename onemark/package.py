@@ -15,10 +15,11 @@ from onemark import validate as v
 ROOT = Path(__file__).resolve().parent.parent
 PROTOCOL = ROOT / "protocols" / "prediction-v1.md"
 SCHEMA = ROOT / "schemas" / "prediction.schema.json"
+SCHEMA_DEFS = ROOT / "schemas" / "_defs.schema.json"
 KNOWLEDGE_DIR = ROOT / "knowledge" / "validated"
 PACKAGE_VERSION = "1.0.0"
 REQUIRED_FILES = ("START_HERE.md", "protocol.md", "knowledge.yaml", "evidence.json", "task.json",
-                  "prediction.schema.json", "manifest.json")
+                  "prediction.schema.json", "_defs.schema.json", "manifest.json")
 ZIP_EPOCH = (1980, 1, 1, 0, 0, 0)
 
 START_HERE = """# START HERE
@@ -34,6 +35,7 @@ You are a stateless AI session. This package is your complete task.
 6. Produce complete combinations and units whenever the protocol requires them.
 7. If data is insufficient, report UNAVAILABLE or INCOMPLETE as defined in the protocol. That is not SKIP.
 8. Return one JSON document that validates against `prediction.schema.json`
+   (its `$ref` to `_defs.schema.json` is resolved from the file in this package; no network needed)
    (protocol_version `{protocol_version}`, knowledge_version `{knowledge_version}`).
 9. Explain the decision with evidence references (observation / inference ids from `evidence.json`).
 10. Use only evidence observed at or before `prediction_cutoff` in `task.json`.
@@ -142,6 +144,7 @@ def build_files(evidence_path, evidence_cutoff=None, betting_deadline=None, phas
         "evidence.json": raw,
         "task.json": _json(task),
         "prediction.schema.json": SCHEMA.read_bytes(),
+        "_defs.schema.json": SCHEMA_DEFS.read_bytes(),
         "START_HERE.md": START_HERE.format(protocol_version=pver, knowledge_version=kver,
                                            race_id=task["race_id"], phase=phase).encode("utf-8"),
     }
@@ -162,6 +165,7 @@ def build_files(evidence_path, evidence_cutoff=None, betting_deadline=None, phas
         "sources": {
             "protocol": "protocols/prediction-v1.md",
             "schema": "schemas/prediction.schema.json",
+            "schema_defs": "schemas/_defs.schema.json",
             "knowledge": "knowledge/validated/",
             "evidence_urls": sorted({o["source_url"] for o in evidence["observations"]}),
         },

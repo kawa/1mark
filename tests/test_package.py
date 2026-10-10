@@ -131,3 +131,17 @@ def test_betting_deadline_distinct_from_cutoff(tmp_path):
 def test_cutoff_before_observation_rejected():
     with pytest.raises(p.PackageError, match="leaked"):
         p.build_files(EV, "2000-01-01T09:00:00+09:00")
+
+
+def test_packaged_schema_validates_offline(tmp_path):
+    from referencing import Registry, Resource
+
+    out = tmp_path / "x"
+    zipfile.ZipFile(build(tmp_path)).extractall(out)
+    schemas = [json.loads((out / n).read_text()) for n in ("prediction.schema.json", "_defs.schema.json")]
+    registry = Registry().with_resources((s["$id"], Resource.from_contents(s)) for s in schemas)
+    validator = Draft202012Validator(schemas[0], registry=registry)
+    ex = json.loads((ROOT / "examples/prediction_pre.synthetic.json").read_text())
+    assert list(validator.iter_errors(ex)) == []
+    ex["boat_assessments"] = []
+    assert list(validator.iter_errors(ex))
