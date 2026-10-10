@@ -1,33 +1,12 @@
 {
   "schema_version": "1.0.0",
   "risk_decision_id": "SYN-RISK-1",
-  "prediction_id": "SYN-PRED-PRE",
-  "prediction_sha256": "15812b3a960af392d3c770b8399569ce3fb27ae7838729f9d993023a57e12262",
+  "subject_type": "prediction",
+  "subject_id": "SYN-PRED-PRE",
+  "subject_sha256": "2e889e6629e376a1fb071d29f921d1a99456e1d473c92a6e7f74feec659789d3",
+  "config_version": "1.0.0",
+  "decision": "approved",
+  "total_stake_jpy": 500,
   "decided_at": "2000-01-01T14:48:00+09:00",
-  "decision": "reduced",
-  "unit_value_jpy": 100,
-  "executions": [
-    {
-      "bet_type": "trifecta",
-      "combination": [
-        1,
-        2,
-        4
-      ],
-      "units": 2,
-      "stake_jpy": 200
-    },
-    {
-      "bet_type": "trio",
-      "combination": [
-        1,
-        2,
-        4
-      ],
-      "units": 2,
-      "stake_jpy": 200
-    }
-  ],
-  "reason": "SYNTHETIC: bankroll cap",
   "synthetic": true
 }

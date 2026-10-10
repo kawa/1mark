@@ -1,0 +1,16 @@
+{
+  "vocabulary_version": "1.0.0",
+  "extension_pattern": "^x-[a-z0-9]+:[a-z][a-z0-9_]*$",
+  "timestamps": "ISO 8601 with explicit UTC offset, e.g. 2000-01-01T14:00:00+09:00",
+  "fields": {
+    "entry_course":    {"type": "integer", "unit": "course", "per_boat": true,  "min": 1, "max": 6},
+    "exhibition_time": {"type": "number",  "unit": "s",      "per_boat": true,  "min": 5.0, "max": 10.0},
+    "exhibition_st":   {"type": "number",  "unit": "s",      "per_boat": true,  "min": -0.5, "max": 1.0},
+    "motor_top2_rate": {"type": "number",  "unit": "percent", "per_boat": true, "min": 0, "max": 100},
+    "motor_top3_rate": {"type": "number",  "unit": "percent", "per_boat": true, "min": 0, "max": 100},
+    "wind_direction":  {"type": "string",  "unit": "compass16", "per_boat": false,
+      "enum": ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"]},
+    "wind_speed_mps":  {"type": "number",  "unit": "m/s",    "per_boat": false, "min": 0, "max": 30},
+    "wave_height_cm":  {"type": "number",  "unit": "cm",     "per_boat": false, "min": 0, "max": 300}
+  }
+}

@@ -2,57 +2,348 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/kawa/1mark/schemas/review.schema.json",
   "title": "Review of a locked prediction against the actual result",
-  "type": "object", "additionalProperties": false,
-  "required": ["schema_version", "protocol_version", "review_id", "prediction_id", "prediction_sha256", "race_id", "result", "outcome", "prediction_error", "decision_quality", "protocol_compliance", "learning_proposal_ids", "synthetic"],
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "protocol_version",
+    "review_id",
+    "prediction_id",
+    "prediction_sha256",
+    "race_id",
+    "result",
+    "outcome",
+    "prediction_error",
+    "decision_quality",
+    "protocol_compliance",
+    "learning_proposal_ids",
+    "synthetic"
+  ],
   "properties": {
-    "schema_version": {"const": "1.0.0"},
-    "protocol_version": {"$ref": "_defs.schema.json#/$defs/semver"},
-    "review_id": {"$ref": "_defs.schema.json#/$defs/id"},
-    "prediction_id": {"$ref": "_defs.schema.json#/$defs/id"},
-    "prediction_sha256": {"$ref": "_defs.schema.json#/$defs/sha256"},
-    "race_id": {"$ref": "_defs.schema.json#/$defs/race_id"},
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "protocol_version": {
+      "$ref": "_defs.schema.json#/$defs/semver"
+    },
+    "review_id": {
+      "$ref": "_defs.schema.json#/$defs/id"
+    },
+    "prediction_id": {
+      "$ref": "_defs.schema.json#/$defs/id"
+    },
+    "prediction_sha256": {
+      "$ref": "_defs.schema.json#/$defs/sha256"
+    },
+    "race_id": {
+      "$ref": "_defs.schema.json#/$defs/race_id"
+    },
     "result": {
-      "type": "object", "additionalProperties": false,
-      "required": ["finish_order", "source_url", "confirmed_at"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "finish_order",
+        "source_url",
+        "confirmed_at",
+        "payouts"
+      ],
       "properties": {
-        "finish_order": {"$ref": "_defs.schema.json#/$defs/combination", "description": "Boats finishing 1st, 2nd, 3rd"},
-        "source_url": {"type": "string", "pattern": "^https?://"},
-        "confirmed_at": {"$ref": "_defs.schema.json#/$defs/timestamp"}
+        "finish_order": {
+          "$ref": "_defs.schema.json#/$defs/combination",
+          "description": "Boats finishing 1st, 2nd, 3rd"
+        },
+        "source_url": {
+          "type": "string",
+          "pattern": "^https?://"
+        },
+        "confirmed_at": {
+          "$ref": "_defs.schema.json#/$defs/timestamp"
+        },
+        "payouts": {
+          "type": "array",
+          "description": "Official payouts by bet type and combination, including refunds",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "bet_type",
+              "combination",
+              "kind"
+            ],
+            "properties": {
+              "bet_type": {
+                "$ref": "_defs.schema.json#/$defs/bet_type"
+              },
+              "combination": {
+                "$ref": "_defs.schema.json#/$defs/combination"
+              },
+              "kind": {
+                "enum": [
+                  "win",
+                  "refund"
+                ]
+              },
+              "payout_per_100_jpy": {
+                "type": "integer",
+                "minimum": 100
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "win"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "payout_per_100_jpy"
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "refund"
+                    }
+                  }
+                },
+                "then": {
+                  "not": {
+                    "required": [
+                      "payout_per_100_jpy"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
       }
     },
     "outcome": {
-      "type": "object", "additionalProperties": false,
-      "required": ["bet_results"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bet_results"
+      ],
       "description": "Facts only: which locked bets hit. Computed deterministically.",
       "properties": {
-        "bet_results": {"type": "array", "items": {"type": "object", "additionalProperties": false,
-          "required": ["bet_type", "combination", "hit"],
-          "properties": {"bet_type": {"$ref": "_defs.schema.json#/$defs/bet_type"}, "combination": {"$ref": "_defs.schema.json#/$defs/combination"}, "hit": {"type": "boolean"}}}}
+        "bet_results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "bet_type",
+              "combination",
+              "hit"
+            ],
+            "properties": {
+              "bet_type": {
+                "$ref": "_defs.schema.json#/$defs/bet_type"
+              },
+              "combination": {
+                "$ref": "_defs.schema.json#/$defs/combination"
+              },
+              "hit": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
       }
     },
     "prediction_error": {
-      "type": "object", "additionalProperties": false,
-      "required": ["summary", "boat_errors"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "boat_errors"
+      ],
       "description": "How the probabilistic view differed from reality, independent of bets.",
       "properties": {
-        "summary": {"$ref": "_defs.schema.json#/$defs/text"},
-        "boat_errors": {"type": "array", "items": {"type": "object", "additionalProperties": false,
-          "required": ["boat", "note"], "properties": {"boat": {"$ref": "_defs.schema.json#/$defs/boat"}, "note": {"$ref": "_defs.schema.json#/$defs/text"}}}}
+        "summary": {
+          "$ref": "_defs.schema.json#/$defs/text"
+        },
+        "boat_errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "boat",
+              "note"
+            ],
+            "properties": {
+              "boat": {
+                "$ref": "_defs.schema.json#/$defs/boat"
+              },
+              "note": {
+                "$ref": "_defs.schema.json#/$defs/text"
+              }
+            }
+          }
+        }
       }
     },
     "decision_quality": {
-      "type": "object", "additionalProperties": false,
-      "required": ["rating", "rationale"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rating",
+        "rationale"
+      ],
       "description": "Was the decision sound given information available at lock time, regardless of result.",
-      "properties": {"rating": {"enum": ["good", "acceptable", "poor"]}, "rationale": {"$ref": "_defs.schema.json#/$defs/text"}}
+      "properties": {
+        "rating": {
+          "enum": [
+            "good",
+            "acceptable",
+            "poor"
+          ]
+        },
+        "rationale": {
+          "$ref": "_defs.schema.json#/$defs/text"
+        }
+      }
     },
     "protocol_compliance": {
-      "type": "object", "additionalProperties": false,
-      "required": ["checks"],
-      "properties": {"checks": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false,
-        "required": ["rule", "passed"], "properties": {"rule": {"$ref": "_defs.schema.json#/$defs/text"}, "passed": {"type": "boolean"}, "note": {"type": "string"}}}}}
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "checks"
+      ],
+      "properties": {
+        "checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "rule",
+              "passed"
+            ],
+            "properties": {
+              "rule": {
+                "$ref": "_defs.schema.json#/$defs/text"
+              },
+              "passed": {
+                "type": "boolean"
+              },
+              "note": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
     },
-    "learning_proposal_ids": {"type": "array", "items": {"$ref": "_defs.schema.json#/$defs/id"}},
-    "synthetic": {"type": "boolean"}
-  }
+    "learning_proposal_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "_defs.schema.json#/$defs/id"
+      }
+    },
+    "synthetic": {
+      "type": "boolean"
+    },
+    "decision_id": {
+      "$ref": "_defs.schema.json#/$defs/id",
+      "description": "Set when a WAIT baseline was followed by a post-exhibition decision"
+    },
+    "decision_sha256": {
+      "$ref": "_defs.schema.json#/$defs/sha256"
+    },
+    "settlement": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Financial settlement, kept separate from outcome (hit detection)",
+      "required": [
+        "risk_decision_id",
+        "risk_decision_sha256",
+        "lines",
+        "total_stake_jpy",
+        "total_returned_jpy",
+        "profit_jpy"
+      ],
+      "properties": {
+        "risk_decision_id": {
+          "$ref": "_defs.schema.json#/$defs/id"
+        },
+        "risk_decision_sha256": {
+          "$ref": "_defs.schema.json#/$defs/sha256"
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "bet_type",
+              "combination",
+              "units",
+              "stake_jpy",
+              "status",
+              "returned_jpy"
+            ],
+            "properties": {
+              "bet_type": {
+                "$ref": "_defs.schema.json#/$defs/bet_type"
+              },
+              "combination": {
+                "$ref": "_defs.schema.json#/$defs/combination"
+              },
+              "units": {
+                "$ref": "_defs.schema.json#/$defs/units"
+              },
+              "stake_jpy": {
+                "$ref": "_defs.schema.json#/$defs/stake_jpy"
+              },
+              "status": {
+                "enum": [
+                  "win",
+                  "miss",
+                  "refund"
+                ]
+              },
+              "returned_jpy": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "total_stake_jpy": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_returned_jpy": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "profit_jpy": {
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "decision_id"
+        ]
+      },
+      "then": {
+        "required": [
+          "decision_sha256"
+        ]
+      }
+    }
+  ]
 }

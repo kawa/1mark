@@ -6,7 +6,7 @@
   "evidence": [
     {
       "review_id": "SYN-REV-1",
-      "observation": "boat 4 finished 2nd at 0.15 probability"
+      "observation": "boat 4 finished 2nd despite a weak assessment"
     }
   ],
   "status": "proposed",

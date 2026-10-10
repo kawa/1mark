@@ -1,0 +1,7 @@
+{
+  "config_version": "1.0.0",
+  "description": "Unit value and stake constraints for the current experiment. Versioned; not a permanent domain rule.",
+  "unit_value_jpy": 100,
+  "stake_multiple_jpy": 100,
+  "min_units_per_bet": 1
+}

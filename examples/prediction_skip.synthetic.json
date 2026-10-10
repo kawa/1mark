@@ -5,14 +5,14 @@
   "task_id": "SYN-TASK-1",
   "race_id": "20000101-01-01",
   "evidence_id": "SYN-EV-1",
-  "locked_at": "2000-01-01T14:45:00+09:00",
+  "locked_at": "2000-01-01T10:30:00+09:00",
   "synthetic": true,
   "prediction_id": "SYN-PRED-SKIP",
   "status": "SKIP",
   "boat_assessments": [
     {
       "boat": 1,
-      "win_probability": 0.45,
+      "assessment": "strong",
       "rationale": "SYNTHETIC rationale for boat 1",
       "evidence_ids": [
         "o1",
@@ -21,31 +21,31 @@
     },
     {
       "boat": 2,
-      "win_probability": 0.2,
+      "assessment": "moderate",
       "rationale": "SYNTHETIC rationale for boat 2",
       "evidence_ids": []
     },
     {
       "boat": 3,
-      "win_probability": 0.1,
+      "assessment": "weak",
       "rationale": "SYNTHETIC rationale for boat 3",
       "evidence_ids": []
     },
     {
       "boat": 4,
-      "win_probability": 0.15,
+      "assessment": "moderate",
       "rationale": "SYNTHETIC rationale for boat 4",
       "evidence_ids": []
     },
     {
       "boat": 5,
-      "win_probability": 0.06,
+      "assessment": "weak",
       "rationale": "SYNTHETIC rationale for boat 5",
       "evidence_ids": []
     },
     {
       "boat": 6,
-      "win_probability": 0.04,
+      "assessment": "weak",
       "rationale": "SYNTHETIC rationale for boat 6",
       "evidence_ids": []
     }

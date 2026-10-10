@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "protocol_version": "1.0.0",
+  "knowledge_version": "none",
+  "task_id": "SYN-TASK-1",
+  "race_id": "20000101-01-01",
+  "baseline_prediction_id": "SYN-PRED-WAIT",
+  "baseline_sha256": "556a31a11f323c1763014d80187349828dafbaa332fc2283d171c9915320e22a",
+  "evidence_id": "SYN-EV-2",
+  "locked_at": "2000-01-01T14:40:00+09:00",
+  "synthetic": true,
+  "decision_id": "SYN-DEC-SKIP",
+  "final": "SKIP",
+  "changes": [],
+  "skip_analysis": {
+    "reason": "SYNTHETIC: exhibition contradicts baseline and no edge remains",
+    "evidence_ids": [
+      "e1",
+      "e3",
+      "ei1"
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kawa/1mark/schemas/units_config.schema.json",
+  "title": "Versioned unit and stake configuration",
+  "type": "object", "additionalProperties": false,
+  "required": ["config_version", "unit_value_jpy", "stake_multiple_jpy", "min_units_per_bet"],
+  "properties": {
+    "config_version": {"$ref": "_defs.schema.json#/$defs/semver"},
+    "description": {"type": "string"},
+    "unit_value_jpy": {"type": "integer", "minimum": 1},
+    "stake_multiple_jpy": {"type": "integer", "minimum": 1},
+    "min_units_per_bet": {"type": "integer", "minimum": 1}
+  }
+}

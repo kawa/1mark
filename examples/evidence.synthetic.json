@@ -1,24 +1,25 @@
 {
   "schema_version": "1.0.0",
+  "vocabulary_version": "1.0.0",
   "evidence_id": "SYN-EV-1",
   "race_id": "20000101-01-01",
   "synthetic": true,
   "observations": [
     {
       "id": "o1",
-      "field": "national_win_rate",
+      "field": "x-syn:national_win_rate",
       "value": 7.1,
       "source_url": "https://example.invalid/synthetic/o1",
-      "observed_at": "2000-01-01T14:00:00+09:00",
+      "observed_at": "2000-01-01T10:00:00+09:00",
       "phase": "pre_race",
       "boat": 1
     },
     {
       "id": "o2",
-      "field": "national_win_rate",
+      "field": "x-syn:national_win_rate",
       "value": 4.2,
       "source_url": "https://example.invalid/synthetic/o2",
-      "observed_at": "2000-01-01T14:00:00+09:00",
+      "observed_at": "2000-01-01T10:00:00+09:00",
       "phase": "pre_race",
       "boat": 4
     },
@@ -27,8 +28,17 @@
       "field": "wind_speed_mps",
       "value": 2,
       "source_url": "https://example.invalid/synthetic/o3",
-      "observed_at": "2000-01-01T14:00:00+09:00",
+      "observed_at": "2000-01-01T10:00:00+09:00",
       "phase": "pre_race"
+    },
+    {
+      "id": "o4",
+      "field": "motor_top2_rate",
+      "value": 45.5,
+      "source_url": "https://example.invalid/synthetic/o4",
+      "observed_at": "2000-01-01T10:00:00+09:00",
+      "phase": "pre_race",
+      "boat": 1
     }
   ],
   "inferences": [
@@ -36,7 +46,8 @@
       "id": "i1",
       "statement": "SYNTHETIC: boat 1 likely strong from the inside course",
       "based_on": [
-        "o1"
+        "o1",
+        "o4"
       ]
     }
   ],

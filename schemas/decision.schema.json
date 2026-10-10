@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kawa/1mark/schemas/decision.schema.json",
+  "title": "Post-exhibition decision on a locked WAIT baseline (baseline is never overwritten)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "protocol_version",
+    "knowledge_version",
+    "decision_id",
+    "task_id",
+    "race_id",
+    "baseline_prediction_id",
+    "baseline_sha256",
+    "evidence_id",
+    "final",
+    "changes",
+    "locked_at",
+    "synthetic"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "protocol_version": {
+      "$ref": "_defs.schema.json#/$defs/semver"
+    },
+    "knowledge_version": {
+      "$ref": "_defs.schema.json#/$defs/id"
+    },
+    "decision_id": {
+      "$ref": "_defs.schema.json#/$defs/id"
+    },
+    "task_id": {
+      "$ref": "_defs.schema.json#/$defs/id"
+    },
+    "race_id": {
+      "$ref": "_defs.schema.json#/$defs/race_id"
+    },
+    "baseline_prediction_id": {
+      "$ref": "_defs.schema.json#/$defs/id"
+    },
+    "baseline_sha256": {
+      "$ref": "_defs.schema.json#/$defs/sha256"
+    },
+    "evidence_id": {
+      "$ref": "_defs.schema.json#/$defs/id",
+      "description": "Post-exhibition, pre-race evidence bundle"
+    },
+    "final": {
+      "enum": [
+        "BET",
+        "SKIP"
+      ]
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/change"
+      },
+      "description": "Empty list keeps the baseline unchanged"
+    },
+    "final_bets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "_defs.schema.json#/$defs/bet"
+      }
+    },
+    "skip_analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reason",
+        "evidence_ids"
+      ],
+      "properties": {
+        "reason": {
+          "$ref": "_defs.schema.json#/$defs/text"
+        },
+        "evidence_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "_defs.schema.json#/$defs/id"
+          }
+        }
+      }
+    },
+    "locked_at": {
+      "$ref": "_defs.schema.json#/$defs/timestamp"
+    },
+    "synthetic": {
+      "type": "boolean"
+    }
+  },
+  "$defs": {
+    "change": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action",
+        "bet_type",
+        "combination",
+        "evidence_ids",
+        "reason"
+      ],
+      "properties": {
+        "action": {
+          "enum": [
+            "add",
+            "remove",
+            "change_units"
+          ]
+        },
+        "bet_type": {
+          "$ref": "_defs.schema.json#/$defs/bet_type"
+        },
+        "combination": {
+          "$ref": "_defs.schema.json#/$defs/combination"
+        },
+        "units": {
+          "$ref": "_defs.schema.json#/$defs/units",
+          "description": "New units; required for add and change_units"
+        },
+        "evidence_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "_defs.schema.json#/$defs/id"
+          }
+        },
+        "reason": {
+          "$ref": "_defs.schema.json#/$defs/text"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "enum": [
+                  "add",
+                  "change_units"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "units"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "const": "remove"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "units"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "final": {
+            "const": "BET"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "final_bets"
+        ],
+        "not": {
+          "required": [
+            "skip_analysis"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "final": {
+            "const": "SKIP"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "skip_analysis"
+        ],
+        "properties": {
+          "changes": {
+            "maxItems": 0
+          }
+        },
+        "not": {
+          "required": [
+            "final_bets"
+          ]
+        }
+      }
+    }
+  ]
+}
