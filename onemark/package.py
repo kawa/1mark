@@ -40,6 +40,7 @@ You are a stateless AI session. This package is your complete task.
 
 ## Task
 Race `{race_id}`, phase `{phase}`. See `task.json` for the objective and output requirements.
+Timing: `evidence_cutoff` is the latest information available; it is not the betting deadline. If `betting_deadline` is null/unknown, `execution_allowed` is false: do not treat any output as executable.
 Integrity: verify file hashes against `manifest.json`.
 """
 
@@ -73,15 +74,25 @@ def build_knowledge():
     raise PackageError("unsupported knowledge layout: expected a single YAML file with knowledge_version")
 
 
-def build_task(evidence, scheduled_start, prediction_cutoff, phase):
+def derive_evidence_cutoff(evidence):
+    """Latest observation (collection) timestamp. Observations keep their original timestamps."""
+    observed = [o["observed_at"] for o in evidence["observations"]]
+    if not observed:
+        raise PackageError("evidence has no observations; cannot derive evidence_cutoff")
+    return max(observed, key=v.parse_ts)
+
+
+def build_task(evidence, evidence_cutoff, betting_deadline, phase, scheduled_start=None):
     race_id = evidence["race_id"]
-    return {
+    task = {
         "schema_version": "1.0.0",
         "task_id": f"TASK-{race_id}-{phase}",
         "task_type": "predict",
         "race_id": race_id,
-        "scheduled_start": scheduled_start,
-        "prediction_cutoff": prediction_cutoff,
+        "prediction_cutoff": evidence_cutoff,
+        "evidence_cutoff": evidence_cutoff,
+        "betting_deadline": betting_deadline,
+        "execution_allowed": betting_deadline is not None,
         "synthetic": bool(evidence["synthetic"]),
         "prediction_phase": phase,
         "objective": f"Produce one prediction for race {race_id} following protocol.md, using only evidence.json.",
@@ -93,13 +104,16 @@ def build_task(evidence, scheduled_start, prediction_cutoff, phase):
             "evidence_references": "cite observation/inference ids from evidence.json",
         },
     }
+    if scheduled_start is not None:
+        task["scheduled_start"] = scheduled_start
+    return task
 
 
 def _json(doc) -> bytes:
     return (json.dumps(doc, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
 
-def build_files(evidence_path, scheduled_start, prediction_cutoff, phase="pre_race"):
+def build_files(evidence_path, evidence_cutoff=None, betting_deadline=None, phase="pre_race", scheduled_start=None):
     """Return {name: bytes}. Raises PackageError on any invalid or missing input."""
     try:
         raw = Path(evidence_path).read_bytes()
@@ -112,8 +126,11 @@ def build_files(evidence_path, scheduled_start, prediction_cutoff, phase="pre_ra
     errors = v.evidence_errors(evidence)
     if errors:
         raise PackageError("evidence errors: " + "; ".join(errors))
-    task = build_task(evidence, scheduled_start, prediction_cutoff, phase)
+    evidence_cutoff = evidence_cutoff or derive_evidence_cutoff(evidence)
+    task = build_task(evidence, evidence_cutoff, betting_deadline, phase, scheduled_start)
     errors = v.schema_errors("task", task) or v.leak_errors(task, evidence)
+    if not errors and betting_deadline and v.parse_ts(evidence_cutoff) > v.parse_ts(betting_deadline):
+        errors.append("evidence_cutoff is after betting_deadline")
     if errors:
         raise PackageError("task errors: " + "; ".join(errors))
     protocol = PROTOCOL.read_bytes()
@@ -133,6 +150,9 @@ def build_files(evidence_path, scheduled_start, prediction_cutoff, phase="pre_ra
         "package_version": PACKAGE_VERSION,
         "race_id": task["race_id"],
         "prediction_phase": phase,
+        "evidence_cutoff": evidence_cutoff,
+        "betting_deadline": betting_deadline or "unknown",
+        "execution_allowed": betting_deadline is not None,
         "protocol_version": pver,
         "knowledge_version": kver,
         "evidence_id": evidence["evidence_id"],
@@ -199,12 +219,13 @@ def validate_zip(path):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--evidence", required=True, help="validated Evidence JSON")
-    ap.add_argument("--scheduled-start", required=True, help="ISO-8601 with offset; not present in Evidence")
-    ap.add_argument("--prediction-cutoff", required=True, help="ISO-8601 with offset; must be >= every observed_at")
+    ap.add_argument("--evidence-cutoff", help="ISO-8601 with offset; default: latest observed_at in Evidence")
+    ap.add_argument("--betting-deadline", help="official deadline, ISO-8601 with offset; if absent it is 'unknown' and execution is prohibited")
+    ap.add_argument("--scheduled-start", help="optional official start, ISO-8601 with offset")
     ap.add_argument("--out", required=True, help="output ZIP path")
     a = ap.parse_args(argv)
     try:
-        files = build_files(a.evidence, a.scheduled_start, a.prediction_cutoff)
+        files = build_files(a.evidence, a.evidence_cutoff, a.betting_deadline, scheduled_start=a.scheduled_start)
         write_zip(files, a.out)
     except PackageError as e:
         print(f"ERROR package: {e}", file=sys.stderr)

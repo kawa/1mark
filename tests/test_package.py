@@ -11,11 +11,12 @@ from onemark import validate as v
 ROOT = Path(__file__).resolve().parent.parent
 EV = ROOT / "examples" / "evidence.synthetic.json"
 START, CUTOFF = "2000-01-01T15:00:00+09:00", "2000-01-01T14:50:00+09:00"
+LATEST = "2000-01-01T10:00:00+09:00"
 
 
 def build(tmp_path, ev=EV, cutoff=CUTOFF):
     out = tmp_path / "pkg.zip"
-    p.write_zip(p.build_files(ev, START, cutoff), out)
+    p.write_zip(p.build_files(ev, cutoff), out)
     return out
 
 
@@ -45,7 +46,7 @@ def test_tamper_detected(tmp_path):
 
 
 def test_missing_file_detected(tmp_path):
-    files = p.build_files(EV, START, CUTOFF)
+    files = p.build_files(EV, CUTOFF)
     del files["task.json"]
     bad = tmp_path / "bad.zip"
     p.write_zip(files, bad)
@@ -62,17 +63,17 @@ def test_bad_evidence(tmp_path, content):
     f = tmp_path / "e.json"
     f.write_text(content)
     with pytest.raises(p.PackageError):
-        p.build_files(f, START, CUTOFF)
+        p.build_files(f)
 
 
 def test_missing_evidence_file(tmp_path):
     with pytest.raises(p.PackageError):
-        p.build_files(tmp_path / "nope.json", START, CUTOFF)
+        p.build_files(tmp_path / "nope.json")
 
 
 def test_post_cutoff_evidence_rejected(tmp_path):
     with pytest.raises(p.PackageError, match="leaked"):
-        p.build_files(EV, START, "1999-12-31T00:00:00+09:00")
+        p.build_files(EV, "1999-12-31T00:00:00+09:00")
 
 
 def test_post_race_phase_rejected(tmp_path):
@@ -81,7 +82,7 @@ def test_post_race_phase_rejected(tmp_path):
     f = tmp_path / "e.json"
     f.write_text(json.dumps(ev))
     with pytest.raises(p.PackageError):
-        p.build_files(f, START, CUTOFF)
+        p.build_files(f)
 
 
 def test_schema_and_example_compat(tmp_path):
@@ -96,5 +97,37 @@ def test_schema_and_example_compat(tmp_path):
 
 def test_cli(tmp_path, capsys):
     out = tmp_path / "x.zip"
-    assert p.main(["--evidence", str(EV), "--scheduled-start", START, "--prediction-cutoff", CUTOFF, "--out", str(out)]) == 0
-    assert p.main(["--evidence", str(tmp_path / "no"), "--scheduled-start", START, "--prediction-cutoff", CUTOFF, "--out", str(out)]) == 2
+    assert p.main(["--evidence", str(EV), "--out", str(out)]) == 0
+    assert p.main(["--evidence", str(tmp_path / "no"), "--out", str(out)]) == 2
+
+
+def test_automatic_cutoff_from_evidence(tmp_path):
+    z = zipfile.ZipFile(build(tmp_path, cutoff=None))
+    task = json.loads(z.read("task.json"))
+    latest = max(o["observed_at"] for o in json.loads(EV.read_text())["observations"])
+    assert task["evidence_cutoff"] == task["prediction_cutoff"] == latest
+    assert json.loads(z.read("manifest.json"))["evidence_cutoff"] == latest
+    assert z.read("evidence.json") == EV.read_bytes()  # original timestamps preserved
+
+
+def test_missing_betting_deadline_is_unknown_and_prohibits_execution(tmp_path):
+    z = zipfile.ZipFile(build(tmp_path, cutoff=None))
+    task = json.loads(z.read("task.json"))
+    m = json.loads(z.read("manifest.json"))
+    assert task["betting_deadline"] is None and task["execution_allowed"] is False
+    assert "scheduled_start" not in task
+    assert m["betting_deadline"] == "unknown" and m["execution_allowed"] is False
+    assert p.validate_zip(tmp_path / "pkg.zip") == []
+
+
+def test_betting_deadline_distinct_from_cutoff(tmp_path):
+    files = p.build_files(EV, betting_deadline=START)
+    task = json.loads(files["task.json"])
+    assert task["execution_allowed"] is True and task["betting_deadline"] != task["evidence_cutoff"]
+    with pytest.raises(p.PackageError, match="betting_deadline"):
+        p.build_files(EV, betting_deadline="1999-01-01T00:00:00+09:00")
+
+
+def test_cutoff_before_observation_rejected():
+    with pytest.raises(p.PackageError, match="leaked"):
+        p.build_files(EV, "2000-01-01T09:00:00+09:00")
