@@ -39,8 +39,8 @@ def process_race(date, jcd, rno, out_dir, fetcher=br.fetch, schedule=None):
             html = fetcher(url)
         except (ValueError, br.FetchError) as e:
             raise StageError("retrieval", str(e))
-        if schedule is not None and not schedule:
-            # one official racelist page lists all 12 deadlines: parse it once, no extra request
+        if schedule is not None and not any(e["status"] == "available" for e in schedule.values()):
+            # one official racelist page lists all 12 deadlines: parse fetched pages (no extra request) until one has them
             schedule.update(dl.parse_deadlines(html, date, jcd, url, _now()))
         race_dir.mkdir(parents=True, exist_ok=True)
         html_path = race_dir / f"racelist-{base}.html"
@@ -91,7 +91,7 @@ def run_batch(date, jcd, out_dir, fetcher=br.fetch, delay=3.0, sleep=time.sleep)
         "total": len(results),
         "succeeded": [r["rno"] for r in results if r["status"] == "success"],
         "failed": [r["rno"] for r in results if r["status"] == "failed"],
-        "schedule_status": "available" if schedule else "unknown",
+        "schedule_status": "available" if any(e["status"] == "available" for e in schedule.values()) else "unknown",
         "races": results,
     }
     (out / "batch-summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

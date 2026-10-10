@@ -63,7 +63,6 @@ def test_package_integration_and_execution_not_approved(tmp_path):
     ev = tmp_path / "ev.json"
     from onemark import boatrace as br
     ev.write_text(json.dumps(br.build_evidence(br.parse_racelist(HTML), DATE, JCD, 1, URL)), encoding="utf-8")
-    # evidence retrieved before the deadline is required; use a far-future deadline-independent check via manifest
     files = p.build_files(str(ev), evidence_cutoff="2026-10-11T09:00:00+09:00", schedule=s[1])
     m = json.loads(files["manifest.json"])
     t = json.loads(files["task.json"])
@@ -112,3 +111,9 @@ def test_batch_missing_schedule_is_not_failure(tmp_path):
     html = FHTML.replace("締切予定時刻", "他")
     s = b.run_batch(FDATE, JCD, tmp_path, fetcher=lambda u: html, delay=0, sleep=lambda x: None)
     assert s["failed"] == [] and s["races"][0]["betting_deadline"] == "unknown"
+
+
+def test_schedule_status_unknown_when_no_deadlines(tmp_path):
+    html = FHTML.replace("締切予定時刻", "他")
+    s = b.run_batch(FDATE, JCD, tmp_path, fetcher=lambda u: html, delay=0, sleep=lambda x: None)
+    assert s["schedule_status"] == "unknown"
