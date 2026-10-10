@@ -1,0 +1,33 @@
+name: BOAT RACE batch ingestion (12 races)
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Race date YYYYMMDD"
+        required: true
+      jcd:
+        description: "Venue code (02 = Toda)"
+        required: true
+        default: "02"
+permissions:
+  contents: read
+jobs:
+  batch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Fetch, validate and package races 1-12
+        env:
+          IN_DATE: ${{ inputs.date }}
+          IN_JCD: ${{ inputs.jcd }}
+        run: python -m onemark.batch --date "$IN_DATE" --jcd "$IN_JCD" --out-dir batch-out
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: boatrace-batch-${{ inputs.date }}-${{ inputs.jcd }}
+          path: batch-out/
+          if-no-files-found: warn
