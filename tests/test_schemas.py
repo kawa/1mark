@@ -25,8 +25,8 @@ def test_schemas_are_valid(schema):
 @pytest.mark.parametrize("path", sorted((ROOT / "examples").glob("*.synthetic.json")))
 def test_examples_validate_and_are_synthetic(path):
     doc = json.loads(path.read_text())
-    kind = path.name.split(".")[0] if "_" not in path.name.split(".")[0] or path.name.startswith("learning") else path.name.split("_")[0]
-    kind = "learning_proposal" if kind == "learning" else kind
+    stem = path.name.split(".")[0]
+    kind = "learning_proposal" if stem.startswith("learning") else stem.split("_")[0]
     assert doc["synthetic"] is True
     assert valid(kind, doc)
 
