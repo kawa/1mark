@@ -11,5 +11,6 @@ Prediction and evaluation framework for Japanese boat racing (kyotei), designed 
 BOAT RACE racelist PoC: `python -m onemark.boatrace --date YYYYMMDD --jcd 02 --rno 1` (or the manual "BOAT RACE racelist ingestion" workflow).
 
 Batch workflow: `python -m onemark.workflow <batch-dir>` builds one batch ZIP (PRE for all races, user-selected WAIT, exhibition revisions); see `instructions/stateless-session.md`.
+Validate a revision end to end: `python -m onemark.workflow check-revision --baseline pred.json --revision rev.json [--state state.json]`.
 
 Test: `pip install -r requirements.txt && pytest`

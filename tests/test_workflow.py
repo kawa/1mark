@@ -164,3 +164,42 @@ def test_batch_zip(tmp_path):
     assert set(wf.BATCH_FILES) <= set(z.namelist()) and len(m["missing_races"]) == 10
     text = z.read("START_HERE.md").decode()
     assert "Never report it as SKIP" in text and "WAIT_SWITCHED_TO_PRE" in text
+
+
+def test_direct_pre_purchase_is_terminal_without_revision():
+    st = load("workflow_state_pre_purchased")
+    assert v.schema_errors("workflow_state", st) == [] and wf.workflow_state_errors(st, BASE) == []
+    assert "revision_id" not in json.dumps(st)
+    more = copy.deepcopy(st)
+    more["history"].append({"state": "WAIT_SELECTED", "at": "2000-01-01T10:10:00+09:00"})
+    more["state"] = "WAIT_SELECTED"
+    assert any("invalid transition" in e for e in wf.workflow_state_errors(more))
+
+
+def test_wait_then_revision_then_final():
+    st, rev = load("workflow_state_final_purchased"), load("exhibition_revision_changed")
+    assert wf.check_revision(BASE, rev, st) == []
+    wrong = mut("workflow_state_final_purchased", lambda d: d["history"][-1].update(revision_id="OTHER"))
+    assert any("revision_id does not match" in e for e in wf.check_revision(BASE, rev, wrong))
+    assert any("no FINAL_" in e for e in wf.check_revision(BASE, rev, load("workflow_state_wait")))
+    assert any("prior WAIT_SELECTED" in e for e in wf.check_revision(BASE, rev, mut(
+        "workflow_state_final_purchased", lambda d: d["history"].pop(1))) )
+
+
+def test_check_revision_cli(tmp_path, capsys):
+    def f(n, d):
+        (tmp_path / n).write_text(json.dumps(d))
+        return str(tmp_path / n)
+
+    args = ["check-revision", "--baseline", f("b.json", BASE), "--revision", f("r.json", load("exhibition_revision_changed")),
+            "--state", f("s.json", load("workflow_state_final_purchased"))]
+    assert wf.main(args) == 0 and "OK" in capsys.readouterr().out
+    tampered = mut("exhibition_revision_changed", lambda d: d["changes"]["added"].clear())
+    args[4] = f("r2.json", tampered)
+    assert wf.main(args) == 1 and "changes do not match" in capsys.readouterr().out
+    other = copy.deepcopy(BASE)
+    other["bets"][0]["units"] = 9
+    args[2] = f("b2.json", other)
+    args[4] = f("r.json", load("exhibition_revision_changed"))
+    assert wf.main(args) == 1
+    assert wf.main(["check-revision", "--baseline", "/nonexistent", "--revision", "x"]) == 1

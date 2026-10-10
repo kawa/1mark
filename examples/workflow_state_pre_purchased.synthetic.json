@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "race_id": "20000101-01-01",
+  "baseline": {
+    "prediction_id": "SYN-PRED-V11-PRE",
+    "prediction_sha256": "7d47c566128186cc519bb9d76b576cc70f25eca145d6d274fdc9a9a5f597d67b"
+  },
+  "state": "PRE_PURCHASED",
+  "synthetic": true,
+  "history": [
+    {
+      "state": "UNDECIDED",
+      "at": "2000-01-01T10:00:00+09:00"
+    },
+    {
+      "state": "PRE_PURCHASED",
+      "at": "2000-01-01T10:05:00+09:00",
+      "note": "SYNTHETIC: user bought PRE immediately"
+    }
+  ]
+}

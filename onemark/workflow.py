@@ -249,7 +249,48 @@ def build_batch_zip(batch_dir, out, batch_id=None):
     return manifest
 
 
+def check_revision(baseline, revision, state=None):
+    """End-to-end check of a locked PRE baseline against an exhibition revision (and optional workflow state)."""
+    errors = [f"baseline: {e}" for e in v.schema_errors("prediction", baseline)] or \
+             [f"baseline: {e}" for e in v.prediction_errors(baseline)]
+    errors += [f"revision: {e}" for e in v.schema_errors("exhibition_revision", revision)]
+    if errors:
+        return errors
+    errors += [f"revision: {e}" for e in revision_errors(revision, baseline)]
+    if state is not None:
+        errors += [f"state: {e}" for e in v.schema_errors("workflow_state", state)]
+        if not errors:
+            errors += [f"state: {e}" for e in workflow_state_errors(state, baseline)]
+            if state["baseline"] != revision.get("baseline"):
+                errors.append("state: baseline differs from revision baseline")
+            finals = [h for h in state["history"] if h["state"].startswith("FINAL_")]
+            if not finals:
+                errors.append("state: no FINAL_* state recorded for this revision")
+            elif finals[-1].get("revision_id") != revision["revision_id"]:
+                errors.append("state: FINAL_* revision_id does not match the revision")
+            if not any(h["state"] == "WAIT_SELECTED" for h in state["history"]):
+                errors.append("state: a revision requires a prior WAIT_SELECTED")
+    return errors
+
+
 def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] == "check-revision":
+        ap = argparse.ArgumentParser(prog="onemark.workflow check-revision",
+                                     description="Validate an exhibition revision against its locked PRE baseline.")
+        ap.add_argument("--baseline", required=True, help="original locked PRE prediction JSON")
+        ap.add_argument("--revision", required=True, help="exhibition_revision JSON")
+        ap.add_argument("--state", help="optional workflow_state JSON")
+        a = ap.parse_args(argv[1:])
+        try:
+            load = lambda f: json.loads(Path(f).read_text())
+            errors = check_revision(load(a.baseline), load(a.revision), load(a.state) if a.state else None)
+        except (OSError, ValueError) as e:
+            errors = [f"cannot read input: {e}"]
+        for e in errors:
+            print(e)
+        print("OK" if not errors else f"{len(errors)} error(s)")
+        return 1 if errors else 0
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("batch_dir")
     ap.add_argument("--out", default="batch-package.zip")
