@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
-      - name: Fetch, validate and package races 1-12
+      - name: Fetch entry lists, parse official betting deadlines (same pages), validate and package races 1-12
         id: ingest
         env:
           IN_DATE: ${{ inputs.date }}

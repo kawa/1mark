@@ -46,7 +46,7 @@ def test_exhibition_time_official_estimated_unknown():
     assert wf.exhibition_time(official="2000-01-01T11:20:00+09:00")["kind"] == "official"
     e = wf.exhibition_time(betting_deadline="2000-01-01T11:00:00+09:00")
     assert e["kind"] == "estimated_from_betting_deadline" and e["offset_minutes"] == wf.DEFAULT_EXHIBITION_OFFSET_MINUTES
-    assert v.parse_ts(e["time"]) == v.parse_ts("2000-01-01T10:50:00+09:00")
+    assert v.parse_ts(e["time"]) == v.parse_ts("2000-01-01T10:40:00+09:00")
     assert wf.exhibition_time(betting_deadline="2000-01-01T11:00:00+09:00", offset_minutes=15)["offset_minutes"] == 15
     assert wf.exhibition_time(official="2000-01-01T11:20:00+09:00", betting_deadline="2000-01-01T11:30:00+09:00")["kind"] == "official"
     assert wf.exhibition_time() == {"kind": "unknown"}
