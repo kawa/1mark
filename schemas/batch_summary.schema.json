@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kawa/1mark/schemas/batch_summary.schema.json",
+  "title": "Race-by-race summary of a 12-race PRE/SKIP batch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "batch_id",
+    "generated_at",
+    "races",
+    "synthetic"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "_defs.schema.json#/$defs/semver"
+    },
+    "batch_id": {
+      "$ref": "_defs.schema.json#/$defs/id"
+    },
+    "generated_at": {
+      "$ref": "_defs.schema.json#/$defs/timestamp"
+    },
+    "races": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "race_id",
+          "processing",
+          "exhibition_time"
+        ],
+        "properties": {
+          "race_id": {
+            "$ref": "_defs.schema.json#/$defs/race_id"
+          },
+          "processing": {
+            "enum": [
+              "PROCESSED",
+              "FAILED"
+            ]
+          },
+          "status": {
+            "enum": [
+              "PRE",
+              "SKIP",
+              "UNAVAILABLE",
+              "INCOMPLETE"
+            ]
+          },
+          "prediction_id": {
+            "$ref": "_defs.schema.json#/$defs/id"
+          },
+          "prediction_sha256": {
+            "$ref": "_defs.schema.json#/$defs/sha256"
+          },
+          "bets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "bet_type",
+                "combination",
+                "units"
+              ],
+              "properties": {
+                "bet_type": {
+                  "$ref": "_defs.schema.json#/$defs/bet_type"
+                },
+                "combination": {
+                  "$ref": "_defs.schema.json#/$defs/combination"
+                },
+                "units": {
+                  "$ref": "_defs.schema.json#/$defs/units"
+                }
+              }
+            }
+          },
+          "total_units": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "exhibition_time": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "official",
+                  "estimated_from_betting_deadline",
+                  "unknown"
+                ],
+                "description": "estimated_* is never an official exhibition time"
+              },
+              "time": {
+                "$ref": "_defs.schema.json#/$defs/timestamp"
+              },
+              "betting_deadline": {
+                "$ref": "_defs.schema.json#/$defs/timestamp"
+              },
+              "offset_minutes": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "source": {
+                "$ref": "_defs.schema.json#/$defs/text"
+              }
+            }
+          },
+          "data_limitations": {
+            "type": "array",
+            "items": {
+              "$ref": "_defs.schema.json#/$defs/text"
+            }
+          },
+          "failure": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "stage",
+              "error"
+            ],
+            "properties": {
+              "stage": {
+                "$ref": "_defs.schema.json#/$defs/text"
+              },
+              "error": {
+                "$ref": "_defs.schema.json#/$defs/text"
+              }
+            }
+          }
+        }
+      }
+    },
+    "synthetic": {
+      "type": "boolean"
+    }
+  }
+}

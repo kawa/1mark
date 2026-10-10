@@ -16,7 +16,8 @@ from jsonschema import Draft202012Validator
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_DIR = ROOT / "schemas"
 CONFIG_DIR = ROOT / "config"
-KINDS = ("task", "evidence", "prediction", "decision", "risk_decision", "review", "learning_proposal")
+KINDS = ("task", "evidence", "prediction", "decision", "risk_decision", "review", "learning_proposal",
+         "workflow_state", "exhibition_revision", "batch_summary")
 
 
 def load_units_config():
@@ -531,6 +532,11 @@ def validate_file(path, warnings=None):
     errors = schema_errors(kind, doc)
     if not errors and kind == "prediction":
         errors += prediction_errors(doc)
+    if not errors and kind in ("workflow_state", "exhibition_revision", "batch_summary"):
+        from onemark import workflow as wf
+
+        errors += {"workflow_state": wf.workflow_state_errors, "exhibition_revision": wf.revision_errors,
+                   "batch_summary": wf.batch_summary_errors}[kind](doc)
     if not errors and kind == "decision":
         errors += bets_errors(doc.get("final_bets", []))
     if not errors and kind == "evidence":

@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kawa/1mark/schemas/exhibition_revision.schema.json",
+  "title": "Post-exhibition revision (or retention) of a locked PRE prediction",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "revision_id",
+    "outcome",
+    "created_at",
+    "explanation",
+    "synthetic"
+  ],
+  "properties": {
+    "schema_version": {
+      "$ref": "_defs.schema.json#/$defs/semver"
+    },
+    "revision_id": {
+      "$ref": "_defs.schema.json#/$defs/id"
+    },
+    "outcome": {
+      "enum": [
+        "REVISED",
+        "RETAINED",
+        "NEEDS_CLARIFICATION"
+      ]
+    },
+    "race_id": {
+      "$ref": "_defs.schema.json#/$defs/race_id"
+    },
+    "candidate_race_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "_defs.schema.json#/$defs/race_id"
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "prediction_id",
+        "prediction_sha256"
+      ],
+      "properties": {
+        "prediction_id": {
+          "$ref": "_defs.schema.json#/$defs/id"
+        },
+        "prediction_sha256": {
+          "$ref": "_defs.schema.json#/$defs/sha256"
+        }
+      },
+      "description": "Locked PRE baseline: id and canonical sha256 (onemark.validate.canonical_sha256) of the immutable prediction"
+    },
+    "created_at": {
+      "$ref": "_defs.schema.json#/$defs/timestamp"
+    },
+    "exhibition_observations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "field",
+          "value",
+          "source"
+        ],
+        "properties": {
+          "field": {
+            "$ref": "_defs.schema.json#/$defs/text"
+          },
+          "boat": {
+            "$ref": "_defs.schema.json#/$defs/boat"
+          },
+          "value": {
+            "type": [
+              "number",
+              "string",
+              "integer"
+            ]
+          },
+          "raw": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "_defs.schema.json#/$defs/text"
+          },
+          "observed_at": {
+            "$ref": "_defs.schema.json#/$defs/timestamp"
+          }
+        }
+      }
+    },
+    "missing_observations": {
+      "type": "array",
+      "items": {
+        "$ref": "_defs.schema.json#/$defs/text"
+      }
+    },
+    "prediction": {
+      "$ref": "prediction.schema.json",
+      "description": "Revised prediction (PRE or SKIP); required for REVISED"
+    },
+    "changes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "added",
+        "removed",
+        "units_changed"
+      ],
+      "properties": {
+        "added": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "bet_type",
+              "combination",
+              "units"
+            ],
+            "properties": {
+              "bet_type": {
+                "$ref": "_defs.schema.json#/$defs/bet_type"
+              },
+              "combination": {
+                "$ref": "_defs.schema.json#/$defs/combination"
+              },
+              "units": {
+                "$ref": "_defs.schema.json#/$defs/units"
+              }
+            }
+          }
+        },
+        "removed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "bet_type",
+              "combination"
+            ],
+            "properties": {
+              "bet_type": {
+                "$ref": "_defs.schema.json#/$defs/bet_type"
+              },
+              "combination": {
+                "$ref": "_defs.schema.json#/$defs/combination"
+              }
+            }
+          }
+        },
+        "units_changed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "bet_type",
+              "combination",
+              "from_units",
+              "to_units"
+            ],
+            "properties": {
+              "bet_type": {
+                "$ref": "_defs.schema.json#/$defs/bet_type"
+              },
+              "combination": {
+                "$ref": "_defs.schema.json#/$defs/combination"
+              },
+              "from_units": {
+                "$ref": "_defs.schema.json#/$defs/units"
+              },
+              "to_units": {
+                "$ref": "_defs.schema.json#/$defs/units"
+              }
+            }
+          }
+        }
+      }
+    },
+    "explanation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary"
+      ],
+      "properties": {
+        "summary": {
+          "$ref": "_defs.schema.json#/$defs/text"
+        },
+        "combinations": {
+          "$ref": "_defs.schema.json#/$defs/text"
+        },
+        "units": {
+          "$ref": "_defs.schema.json#/$defs/text"
+        },
+        "reasoning": {
+          "$ref": "_defs.schema.json#/$defs/text"
+        },
+        "unchanged": {
+          "$ref": "_defs.schema.json#/$defs/text"
+        }
+      }
+    },
+    "synthetic": {
+      "type": "boolean"
+    }
+  }
+}
