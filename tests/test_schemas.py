@@ -521,3 +521,88 @@ def test_evidence_uses_vocabulary():
     assert not ok("evidence", bad("evidence", lambda d: d["observations"][2].update(field="Wind Speed")))
     assert not ok("prediction", bad("prediction_wait", lambda d: d["wait_plan"][0]["observation"].update(field="exhibition time")))
     assert v.prediction_errors(bad("prediction_wait", lambda d: d["wait_plan"][0]["observation"].update(field="unknown_field")))
+
+
+# --- Protocol v1.1 decision discipline
+def v11(name, mutate=None):
+    d = copy.deepcopy(load(f"prediction_v11_{name}"))
+    if mutate:
+        mutate(d)
+    return d
+
+
+def v11_errors(d):
+    return v.schema_errors("prediction", d) or v.prediction_errors(d)
+
+
+def test_v11_examples_valid():
+    for n in ("pre", "wait", "skip"):
+        assert not v11_errors(v11(n))
+
+
+def test_v11_missing_exhibition_alone_does_not_force_wait():
+    pre = v11("pre")
+    assert pre["status"] == "PRE" and "wait_plan" not in pre
+    assert not v11_errors(pre)
+    assert v11_errors(v11("pre", lambda d: d.pop("timing_rationale")))
+
+
+def test_v11_no_fixed_bet_count_or_units():
+    def one(d):
+        d["bets"] = d["bets"][:1]
+        d["bets"][0]["units"] = 7
+        d["bet_rationale"]["selections"] = d["bet_rationale"]["selections"][:1]
+        d["bet_rationale"]["total_units"]["units"] = 7
+
+    assert not v11_errors(v11("pre", one))
+
+
+def test_v11_bet_rationale_must_match_bets():
+    assert v11_errors(v11("pre", lambda d: d["bet_rationale"]["total_units"].update(units=99)))
+    assert v11_errors(v11("pre", lambda d: d["bet_rationale"]["selections"].clear()))
+    assert v11_errors(v11("pre", lambda d: d.pop("bet_rationale")))
+
+
+@pytest.mark.parametrize("field", ["uncertainty", "why_relevant", "expected_change", "materiality"])
+def test_v11_wait_requires_evidence_backed_reasoning(field):
+    assert v11_errors(v11("wait", lambda d: d["wait_plan"][0].pop(field)))
+
+
+def test_v11_unsupported_numeric_threshold_rejected():
+    def numeric(d):
+        d["wait_plan"][0]["decision_threshold"] = "boat 1 exhibition time slower than 6.90"
+        d["wait_plan"][0].pop("threshold_basis")
+
+    assert v11_errors(v11("wait", numeric))
+
+
+def test_v11_numeric_threshold_basis_rules():
+    def basis(b):
+        def m(d):
+            d["wait_plan"][0]["decision_threshold"] = "slower than 6.90"
+            d["wait_plan"][0]["threshold_basis"] = b
+        return m
+
+    assert not v11_errors(v11("wait", basis({"kind": "unvalidated_hypothesis", "automatic": False})))
+    assert v11_errors(v11("wait", basis({"kind": "unvalidated_hypothesis", "automatic": True})))
+    assert v11_errors(v11("wait", basis({"kind": "validated_knowledge"})))
+    assert not v11_errors(v11("wait", basis({"kind": "protocol_rule", "ref": "prediction-v1.md#thresholds"})))
+
+
+def test_v11_skip_requires_completed_analysis_and_no_bets():
+    assert v11_errors(v11("skip", lambda d: d["skip_analysis"].pop("completed_analysis")))
+    assert v11_errors(v11("skip", lambda d: d.update(bets=[{"bet_type": "trio", "combination": [1, 2, 3], "units": 1}])))
+
+
+def test_v11_evaluation_required_and_evidence_ids_checked():
+    assert v11_errors(v11("pre", lambda d: d.pop("evaluation")))
+    assert v11_errors(v11("pre", lambda d: d["evaluation"].pop("scenarios")))
+    ev = json.loads((EX / "evidence.synthetic.json").read_text())
+    task = load("task")
+    bad_pred = v11("pre", lambda d: d["evaluation"]["primary_drivers"][0].update(evidence_id="nope"))
+    assert any("unknown evidence id" in e for e in v.prediction_integrity_errors(task, ev, bad_pred))
+
+
+def test_v10_records_unchanged_by_v11_rules():
+    assert not v11_errors(load("prediction_pre"))
+    assert not v11_errors(load("prediction_wait"))

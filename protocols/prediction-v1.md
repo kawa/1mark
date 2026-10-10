@@ -1,7 +1,9 @@
-# 1mark Prediction Protocol v1.0.0
+# 1mark Prediction Protocol v1.1.0
 
 Domain: Japanese boat racing (kyotei). Every race has exactly six boats, numbered 1-6.
 Bet types: trifecta (3連単, ordered 1st-2nd-3rd) and trio (3連複, any order, stored ascending).
+
+Version 1.1.0 adds decision-quality rules (see "Protocol v1.1 decision discipline"). Records with `protocol_version` below 1.1.0 (including all historical predictions) remain valid and are never modified.
 
 ## Layers (never mix)
 | Layer | Location | Changed by |
@@ -47,3 +49,17 @@ A separate `decision` record (`schemas/decision.schema.json`) references the loc
 - Field names, types and units are standardized in `config/evidence-vocabulary-v1.json` (entry course, exhibition time/ST, motor statistics, wind direction/speed, wave height). Ranges and the wind-direction set are **provisional** (pending verification against BOAT RACE data): they only produce warnings. Every observation keeps its `raw_value` exactly as published. Extensions must be namespaced `x-<ns>:<name>`. Timestamps are ISO 8601 with a UTC offset.
 - Unobtained data is listed in `missing_data`, never guessed.
 - Any `post_race` observation or one observed after the cutoff must not be in a pre-race bundle (validator rejects it).
+
+## Protocol v1.1 decision discipline (`protocol_version` >= 1.1.0)
+**Sequence.** Every race first receives a complete pre-exhibition assessment (six `boat_assessments`, `evaluation`, `bets` where a proposition exists). Only then choose the execution timing. Evaluate in this fixed order, recording each in `evaluation`: (1) course advantage, (2) racer performance, (3) motor performance, (4) current-series performance, (5) start-related evidence, (6) missing or contradictory data, (7) plausible scenarios (finish orders). No numerical weights exist; do not invent any. `primary_drivers` must name the evidence ids that most strongly influenced the ranking and how.
+
+**PRE / WAIT / SKIP are chosen by the expected value of additional information**, not by whether exhibition data exists. Missing exhibition data never implies WAIT. There are no target proportions of PRE, WAIT or SKIP.
+- PRE requires `timing_rationale`: why further observation would not materially change the baseline.
+- WAIT: every `wait_plan` step requires `uncertainty` (a specific unresolved question), the `observation` expected to resolve it, `why_relevant`, `expected_change` (concrete change to the baseline) and `materiality` (why the change matters). Generic rules (e.g. "remove the leading boat if its exhibition time ranks last") are not validated knowledge and are not justification.
+- SKIP is a completed analysis ending in a deliberate no-bet decision (`skip_analysis.completed_analysis`), allowed when evidence supports no defensible proposition. It is never used for missing data or unfinished work (use UNAVAILABLE / INCOMPLETE).
+
+**Thresholds.** A numerical threshold in `decision_threshold` needs `threshold_basis`: `protocol_rule` or `validated_knowledge` with a `ref`, or `unvalidated_hypothesis`, which must not be `automatic` and may not be used as an automatic betting rule. Do not invent statistical thresholds. Numerical thresholds without a basis are rejected.
+
+**Bet sizing.** No fixed number of combinations or units. `bet_rationale` must explain each selected combination, the relative allocation, the total units and why alternatives were excluded. Bankroll stays independent of prediction. Do not claim calibrated probabilities or positive expected value without supporting evidence.
+
+**Knowledge.** Keep validated rules, working assumptions and unvalidated hypotheses distinct. Unvalidated heuristics are never added to `knowledge/validated/`; the review and learning lifecycle is unchanged.

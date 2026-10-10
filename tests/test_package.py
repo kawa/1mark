@@ -32,7 +32,7 @@ def test_manifest_hashes_and_versions(tmp_path):
     for name, e in m["files"].items():
         assert e["sha256"] == p.sha256(z.read(name))
     assert z.read("protocol.md") == (ROOT / "protocols/prediction-v1.md").read_bytes()
-    assert m["protocol_version"] == "1.0.0" and m["knowledge_version"] == "none"
+    assert m["protocol_version"] == "1.1.0" and m["knowledge_version"] == "none"
     assert f"protocol_version `{m['protocol_version']}`" in z.read("START_HERE.md").decode()
 
 

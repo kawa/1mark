@@ -161,6 +161,40 @@
             "items": {
               "$ref": "_defs.schema.json#/$defs/bet_operation"
             }
+          },
+          "uncertainty": {
+            "$ref": "_defs.schema.json#/$defs/text"
+          },
+          "why_relevant": {
+            "$ref": "_defs.schema.json#/$defs/text"
+          },
+          "expected_change": {
+            "$ref": "_defs.schema.json#/$defs/text"
+          },
+          "materiality": {
+            "$ref": "_defs.schema.json#/$defs/text"
+          },
+          "threshold_basis": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "protocol_rule",
+                  "validated_knowledge",
+                  "unvalidated_hypothesis"
+                ]
+              },
+              "ref": {
+                "$ref": "_defs.schema.json#/$defs/text"
+              },
+              "automatic": {
+                "type": "boolean"
+              }
+            }
           }
         }
       }
@@ -182,6 +216,9 @@
           "items": {
             "$ref": "_defs.schema.json#/$defs/id"
           }
+        },
+        "completed_analysis": {
+          "$ref": "_defs.schema.json#/$defs/text"
         }
       }
     },
@@ -194,6 +231,274 @@
       "items": {
         "$ref": "_defs.schema.json#/$defs/text"
       }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "course_advantage",
+        "racer_performance",
+        "motor_performance",
+        "current_series",
+        "start_evidence",
+        "data_quality",
+        "scenarios",
+        "primary_drivers"
+      ],
+      "properties": {
+        "course_advantage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "summary",
+            "evidence_ids"
+          ],
+          "properties": {
+            "summary": {
+              "$ref": "_defs.schema.json#/$defs/text"
+            },
+            "evidence_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "_defs.schema.json#/$defs/id"
+              }
+            }
+          }
+        },
+        "racer_performance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "summary",
+            "evidence_ids"
+          ],
+          "properties": {
+            "summary": {
+              "$ref": "_defs.schema.json#/$defs/text"
+            },
+            "evidence_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "_defs.schema.json#/$defs/id"
+              }
+            }
+          }
+        },
+        "motor_performance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "summary",
+            "evidence_ids"
+          ],
+          "properties": {
+            "summary": {
+              "$ref": "_defs.schema.json#/$defs/text"
+            },
+            "evidence_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "_defs.schema.json#/$defs/id"
+              }
+            }
+          }
+        },
+        "current_series": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "summary",
+            "evidence_ids"
+          ],
+          "properties": {
+            "summary": {
+              "$ref": "_defs.schema.json#/$defs/text"
+            },
+            "evidence_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "_defs.schema.json#/$defs/id"
+              }
+            }
+          }
+        },
+        "start_evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "summary",
+            "evidence_ids"
+          ],
+          "properties": {
+            "summary": {
+              "$ref": "_defs.schema.json#/$defs/text"
+            },
+            "evidence_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "_defs.schema.json#/$defs/id"
+              }
+            }
+          }
+        },
+        "data_quality": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "missing_or_contradictory"
+          ],
+          "properties": {
+            "missing_or_contradictory": {
+              "type": "array",
+              "items": {
+                "$ref": "_defs.schema.json#/$defs/text"
+              }
+            },
+            "evidence_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "_defs.schema.json#/$defs/id"
+              }
+            }
+          }
+        },
+        "scenarios": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "description",
+              "finish_order"
+            ],
+            "properties": {
+              "name": {
+                "$ref": "_defs.schema.json#/$defs/text"
+              },
+              "description": {
+                "$ref": "_defs.schema.json#/$defs/text"
+              },
+              "finish_order": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 3,
+                "items": {
+                  "$ref": "_defs.schema.json#/$defs/boat"
+                }
+              }
+            }
+          }
+        },
+        "primary_drivers": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "evidence_id",
+              "influence"
+            ],
+            "properties": {
+              "evidence_id": {
+                "$ref": "_defs.schema.json#/$defs/id"
+              },
+              "influence": {
+                "$ref": "_defs.schema.json#/$defs/text"
+              }
+            }
+          }
+        }
+      }
+    },
+    "bet_rationale": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selections",
+        "allocation",
+        "total_units",
+        "exclusions"
+      ],
+      "properties": {
+        "selections": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "bet_type",
+              "combination",
+              "reason"
+            ],
+            "properties": {
+              "bet_type": {
+                "enum": [
+                  "trifecta",
+                  "trio"
+                ]
+              },
+              "combination": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                  "$ref": "_defs.schema.json#/$defs/boat"
+                }
+              },
+              "reason": {
+                "$ref": "_defs.schema.json#/$defs/text"
+              }
+            }
+          }
+        },
+        "allocation": {
+          "$ref": "_defs.schema.json#/$defs/text"
+        },
+        "total_units": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "units",
+            "reason"
+          ],
+          "properties": {
+            "units": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "reason": {
+              "$ref": "_defs.schema.json#/$defs/text"
+            }
+          }
+        },
+        "exclusions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "description",
+              "reason"
+            ],
+            "properties": {
+              "description": {
+                "$ref": "_defs.schema.json#/$defs/text"
+              },
+              "reason": {
+                "$ref": "_defs.schema.json#/$defs/text"
+              }
+            }
+          }
+        }
+      }
+    },
+    "timing_rationale": {
+      "$ref": "_defs.schema.json#/$defs/text"
     }
   },
   "$defs": {
