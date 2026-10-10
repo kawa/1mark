@@ -32,6 +32,10 @@ You are a stateless AI session in ONE conversation. Do not rely on prior convers
 ## Stage 1: PRE predictions for all 12 races
 1. Discover packages: every `race-NN/*.zip` listed in `manifest.json` (`races`). Each is independent; open each one
    and follow its own `START_HERE.md` / `protocol.md` exactly. This file adds no prediction rules.
+   Races in `manifest.json` `closed_races` had their official betting deadline pass before/at retrieval: ingestion succeeded but
+   there is deliberately NO package. Report each as `CLOSED` (with its deadline); never predict it (no PRE/SKIP from post-deadline
+   evidence), and it is not a failure, SKIP or UNAVAILABLE. Ingestion success, package availability and execution eligibility are
+   separate (`ingestion-summary.json`); a package never approves betting. Continue with all other races.
    Races in `manifest.json` `failed_races` (ingestion stage + error) or `missing_races` have no package: report each as
    `processing: FAILED` with that stage and error. Never treat them as SKIP and never predict them from memory.
 2. Analyze all 12 races independently, using only each race's package. Never require exhibition data for the initial prediction.
@@ -187,7 +191,11 @@ def batch_summary_errors(doc, predictions=None):
         errors.append("races must be exactly race 01-12 of one date/venue")
     for r in doc["races"]:
         rid, et = r["race_id"], r["exhibition_time"]
-        if r["processing"] == "FAILED":
+        if r["processing"] == "CLOSED":
+            for k in ("status", "prediction_id", "bets", "failure"):
+                if k in r:
+                    errors.append(f"{rid}: CLOSED must not carry {k} (closed is not SKIP or a failure)")
+        elif r["processing"] == "FAILED":
             if "failure" not in r:
                 errors.append(f"{rid}: FAILED requires failure")
             for k in ("status", "prediction_id", "bets"):
@@ -239,16 +247,17 @@ def build_batch_zip(batch_dir, out, batch_id=None):
             raise ValueError(f"race-{rno:02d} has multiple package ZIPs; keep exactly one")
         if found:
             packages[rno] = found[0]
-    if not packages:
-        raise ValueError("no race packages found; nothing to bundle")
     files = {f"race-{n:02d}/{p.name}": p.read_bytes() for n, p in packages.items()}
     failed = {}
+    closed = {}
     summary_path = batch_dir / "batch-summary.json"
     if summary_path.exists():
         files["ingestion-summary.json"] = summary_path.read_bytes()
         for r in json.loads(summary_path.read_text(encoding="utf-8")).get("races", []):
             if r.get("status") == "failed":
                 failed[f"{r['rno']:02d}"] = {"stage": r.get("failure_stage"), "error": r.get("error")}
+            elif r.get("status") == "closed":
+                closed[f"{r['rno']:02d}"] = {"betting_deadline": r.get("betting_deadline"), "reason": r.get("closed_reason")}
     schedule = {}
     schedule_path = batch_dir / "schedule.json"
     if schedule_path.exists():
@@ -259,6 +268,8 @@ def build_batch_zip(batch_dir, out, batch_id=None):
                 "raw_time": e.get("raw_time"), "source_url": e.get("source_url"), "retrieved_at": e.get("retrieved_at"),
                 "estimated_exhibition_check_time": deadline.estimate_exhibition(e),
             }
+    if not packages and not closed:
+        raise ValueError("no race packages found; nothing to bundle")
     for name, src in (("workflow_state.schema.json", v.SCHEMA_DIR), ("exhibition_revision.schema.json", v.SCHEMA_DIR),
                       ("batch_summary.schema.json", v.SCHEMA_DIR), ("prediction.schema.json", v.SCHEMA_DIR),
                       ("_defs.schema.json", v.SCHEMA_DIR)):
@@ -268,7 +279,8 @@ def build_batch_zip(batch_dir, out, batch_id=None):
         "batch_id": batch_id or batch_dir.name,
         "races": {f"{n:02d}": f"race-{n:02d}/{p.name}" for n, p in packages.items()},
         "failed_races": failed,
-        "missing_races": [f"{n:02d}" for n in range(1, 13) if n not in packages],
+        "closed_races": closed,
+        "missing_races": [f"{n:02d}" for n in range(1, 13) if n not in packages and f"{n:02d}" not in closed],
         "exhibition_offset_minutes_default": DEFAULT_EXHIBITION_OFFSET_MINUTES,
         "schedule": schedule,
         "files": {k: {"sha256": pkg.sha256(d), "bytes": len(d)} for k, d in sorted(files.items())},

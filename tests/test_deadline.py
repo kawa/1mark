@@ -117,3 +117,40 @@ def test_schedule_status_unknown_when_no_deadlines(tmp_path):
     html = FHTML.replace("締切予定時刻", "他")
     s = b.run_batch(FDATE, JCD, tmp_path, fetcher=lambda u: html, delay=0, sleep=lambda x: None)
     assert s["schedule_status"] == "unknown"
+
+
+def test_batch_closed_and_upcoming_races(tmp_path):
+    from datetime import datetime
+    from onemark import validate as v
+    now = lambda: datetime.fromisoformat("2099-10-11T12:00:00+09:00")  # races 1-3 (<=11:45) are closed
+    s = b.run_batch(FDATE, JCD, tmp_path, fetcher=lambda u: FHTML, delay=0, sleep=lambda x: None, now=now)
+    assert s["closed"] == [1, 2, 3] and s["failed"] == [] and s["succeeded"] == list(range(4, 13))
+    for r in s["races"][:3]:
+        assert r["status"] == "closed" and r["ingestion_success"] is True
+        assert r["prediction_package_available"] is False and r["execution_eligible"] is False
+        d = tmp_path / r["race_dir"]
+        assert list(d.glob("racelist-*.html")) and list(d.glob("evidence-*.json"))
+        assert not list(d.glob("prediction-package-*.zip"))
+    for r in s["races"][3:]:
+        assert r["prediction_package_available"] is True and r["execution_eligible"] is False
+    out = tmp_path / "batch.zip"
+    m = wf.build_batch_zip(tmp_path, out)
+    assert sorted(m["closed_races"]) == ["01", "02", "03"] and m["missing_races"] == [] and m["failed_races"] == {}
+    assert sorted(m["races"]) == [f"{n:02d}" for n in range(4, 13)]
+    with zipfile.ZipFile(out) as z:
+        text = z.read("START_HERE.md").decode()
+    assert "closed_races" in text and "CLOSED" in text and "NO package" in text
+
+
+def test_all_closed_batch_still_bundles_and_anti_leakage_kept(tmp_path):
+    from datetime import datetime
+    now = lambda: datetime.fromisoformat("2099-10-11T23:00:00+09:00")
+    s = b.run_batch(FDATE, JCD, tmp_path, fetcher=lambda u: FHTML, delay=0, sleep=lambda x: None, now=now)
+    assert s["closed"] == list(range(1, 13))
+    assert wf.build_batch_zip(tmp_path, tmp_path / "b.zip")["races"] == {}
+    # the package builder itself still rejects post-deadline evidence
+    ev = next((tmp_path / "race-01").glob("evidence-*.json"))
+    import pytest
+    with pytest.raises(p.PackageError):
+        p.build_files(str(ev), evidence_cutoff="2099-10-11T11:00:00+09:00",
+                      schedule=parse(FHTML, FDATE)[1])

@@ -13,8 +13,13 @@ from pathlib import Path
 from onemark import boatrace as br
 from onemark import deadline as dl
 from onemark import package as pkg
+from onemark import validate as v
 
 RACES = range(1, 13)
+
+
+def _now_dt():
+    return datetime.now(timezone.utc)
 
 
 def _now():
@@ -27,11 +32,11 @@ class StageError(Exception):
         self.stage = stage
 
 
-def process_race(date, jcd, rno, out_dir, fetcher=br.fetch, schedule=None):
+def process_race(date, jcd, rno, out_dir, fetcher=br.fetch, schedule=None, now=_now_dt):
     """Run one race through all stages; returns result dict. Never raises."""
     base = f"{date}-{jcd}-{rno:02d}"
     race_dir = Path(out_dir) / f"race-{rno:02d}"
-    result = {"rno": rno, "race_dir": race_dir.name, "status": "success"}
+    result = {"rno": rno, "race_dir": race_dir.name, "status": "success", "ingestion_success": True}
     stage = "retrieval"
     try:
         try:
@@ -56,6 +61,15 @@ def process_race(date, jcd, rno, out_dir, fetcher=br.fetch, schedule=None):
         errors = br.validate_evidence(doc)
         if errors:
             raise StageError("validation", "; ".join(errors))
+        entry = (schedule or {}).get(rno)
+        if entry and entry.get("betting_deadline"):
+            ref = max(now(), v.parse_ts(pkg.derive_evidence_cutoff(doc)))
+            if v.parse_ts(entry["betting_deadline"]) <= ref:
+                # operational state, not an ingestion failure: no pre-race package from post-deadline evidence
+                result.update(status="closed", prediction_package_available=False, execution_eligible=False,
+                              betting_deadline=entry["betting_deadline"], ingestion_success=True,
+                              closed_reason="official betting deadline passed before/at retrieval")
+                return result
         zip_path = race_dir / f"prediction-package-{base}.zip"
         try:
             pkg.write_zip(pkg.build_files(str(ev_path), schedule=(schedule or {}).get(rno)), zip_path)
@@ -65,16 +79,19 @@ def process_race(date, jcd, rno, out_dir, fetcher=br.fetch, schedule=None):
         if problems:
             raise StageError("package_validation", "; ".join(problems))
         result["package"] = f"{race_dir.name}/{zip_path.name}"
+        result.update(prediction_package_available=True, execution_eligible=False)
         if schedule:
             result["betting_deadline"] = schedule[rno]["betting_deadline"] or "unknown"
     except StageError as e:
-        result.update(status="failed", failure_stage=e.stage, error=str(e), failed_at=_now())
+        result.update(status="failed", ingestion_success=False, prediction_package_available=False,
+                      execution_eligible=False, failure_stage=e.stage, error=str(e), failed_at=_now())
     except Exception as e:  # keep races independent
-        result.update(status="failed", failure_stage=stage, error=f"{type(e).__name__}: {e}", failed_at=_now())
+        result.update(status="failed", ingestion_success=False, prediction_package_available=False,
+                      execution_eligible=False, failure_stage=stage, error=f"{type(e).__name__}: {e}", failed_at=_now())
     return result
 
 
-def run_batch(date, jcd, out_dir, fetcher=br.fetch, delay=3.0, sleep=time.sleep):
+def run_batch(date, jcd, out_dir, fetcher=br.fetch, delay=3.0, sleep=time.sleep, now=_now_dt):
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     results = []
@@ -82,7 +99,7 @@ def run_batch(date, jcd, out_dir, fetcher=br.fetch, delay=3.0, sleep=time.sleep)
     for rno in RACES:
         if rno != RACES[0]:
             sleep(delay)
-        results.append(process_race(date, jcd, rno, out, fetcher, schedule))
+        results.append(process_race(date, jcd, rno, out, fetcher, schedule, now))
     if schedule:
         (out / "schedule.json").write_text(json.dumps({f"{k:02d}": v for k, v in sorted(schedule.items())},
                                                       ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -91,6 +108,7 @@ def run_batch(date, jcd, out_dir, fetcher=br.fetch, delay=3.0, sleep=time.sleep)
         "total": len(results),
         "succeeded": [r["rno"] for r in results if r["status"] == "success"],
         "failed": [r["rno"] for r in results if r["status"] == "failed"],
+        "closed": [r["rno"] for r in results if r["status"] == "closed"],
         "schedule_status": "available" if any(e["status"] == "available" for e in schedule.values()) else "unknown",
         "races": results,
     }
@@ -114,7 +132,7 @@ def main(argv=None):
     for r in s["races"]:
         if r["status"] == "failed":
             print(f"FAILED race {r['rno']} [{r['failure_stage']}]: {r['error']}", file=sys.stderr)
-    print(f"batch {a.date} {a.jcd}: {len(s['succeeded'])} succeeded, {len(s['failed'])} failed")
+    print(f"batch {a.date} {a.jcd}: {len(s['succeeded'])} succeeded, {len(s['failed'])} failed, {len(s['closed'])} closed")
     return 1 if s["failed"] else 0
 
 
