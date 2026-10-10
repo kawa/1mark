@@ -1,0 +1,115 @@
+{
+  "schema_version": "1.0.0",
+  "protocol_version": "1.0.0",
+  "knowledge_version": "none",
+  "task_id": "SYN-TASK-1",
+  "race_id": "20000101-01-01",
+  "evidence_id": "SYN-EV-1",
+  "locked_at": "2000-01-01T10:30:00+09:00",
+  "synthetic": true,
+  "prediction_id": "SYN-PRED-WAIT",
+  "status": "WAIT",
+  "boat_assessments": [
+    {
+      "boat": 1,
+      "assessment": "strong",
+      "rationale": "SYNTHETIC rationale for boat 1",
+      "evidence_ids": [
+        "o1",
+        "i1"
+      ]
+    },
+    {
+      "boat": 2,
+      "assessment": "moderate",
+      "rationale": "SYNTHETIC rationale for boat 2",
+      "evidence_ids": []
+    },
+    {
+      "boat": 3,
+      "assessment": "weak",
+      "rationale": "SYNTHETIC rationale for boat 3",
+      "evidence_ids": []
+    },
+    {
+      "boat": 4,
+      "assessment": "moderate",
+      "rationale": "SYNTHETIC rationale for boat 4",
+      "evidence_ids": []
+    },
+    {
+      "boat": 5,
+      "assessment": "weak",
+      "rationale": "SYNTHETIC rationale for boat 5",
+      "evidence_ids": []
+    },
+    {
+      "boat": 6,
+      "assessment": "weak",
+      "rationale": "SYNTHETIC rationale for boat 6",
+      "evidence_ids": []
+    }
+  ],
+  "bets": [
+    {
+      "bet_type": "trifecta",
+      "combination": [
+        1,
+        2,
+        4
+      ],
+      "units": 3
+    },
+    {
+      "bet_type": "trio",
+      "combination": [
+        1,
+        2,
+        4
+      ],
+      "units": 2
+    }
+  ],
+  "wait_plan": [
+    {
+      "step_id": "step-1",
+      "observation": {
+        "field": "exhibition_time",
+        "boat": 1,
+        "source": "official exhibition"
+      },
+      "decision_threshold": "boat 1 exhibition time slower than 6.90 and slower than boat 4",
+      "expected_operations": [
+        {
+          "action": "add",
+          "bet_type": "trifecta",
+          "combination": [
+            4,
+            1,
+            2
+          ],
+          "units": 2
+        },
+        {
+          "action": "change_units",
+          "bet_type": "trio",
+          "combination": [
+            1,
+            2,
+            4
+          ],
+          "units": 1
+        },
+        {
+          "action": "remove",
+          "bet_type": "trifecta",
+          "combination": [
+            1,
+            2,
+            4
+          ]
+        }
+      ]
+    }
+  ]
+}

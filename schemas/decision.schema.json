@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kawa/1mark/schemas/decision.schema.json",
+  "title": "Post-exhibition decision on a locked WAIT baseline (baseline is never overwritten)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "protocol_version",
+    "knowledge_version",
+    "decision_id",
+    "task_id",
+    "race_id",
+    "baseline_prediction_id",
+    "baseline_sha256",
+    "final",
+    "changes",
+    "locked_at",
+    "synthetic"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "protocol_version": {
+      "$ref": "_defs.schema.json#/$defs/semver"
+    },
+    "knowledge_version": {
+      "$ref": "_defs.schema.json#/$defs/id"
+    },
+    "decision_id": {
+      "$ref": "_defs.schema.json#/$defs/id"
+    },
+    "task_id": {
+      "$ref": "_defs.schema.json#/$defs/id"
+    },
+    "race_id": {
+      "$ref": "_defs.schema.json#/$defs/race_id"
+    },
+    "baseline_prediction_id": {
+      "$ref": "_defs.schema.json#/$defs/id"
+    },
+    "baseline_sha256": {
+      "$ref": "_defs.schema.json#/$defs/sha256"
+    },
+    "evidence_id": {
+      "$ref": "_defs.schema.json#/$defs/id",
+      "description": "Post-exhibition, pre-race evidence bundle"
+    },
+    "final": {
+      "enum": [
+        "BET",
+        "SKIP",
+        "INCOMPLETE"
+      ]
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "$ref": "_defs.schema.json#/$defs/executed_change"
+      },
+      "description": "Empty list keeps the baseline unchanged"
+    },
+    "final_bets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "_defs.schema.json#/$defs/bet"
+      }
+    },
+    "skip_analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reason",
+        "evidence_ids"
+      ],
+      "properties": {
+        "reason": {
+          "$ref": "_defs.schema.json#/$defs/text"
+        },
+        "evidence_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "_defs.schema.json#/$defs/id"
+          }
+        }
+      }
+    },
+    "locked_at": {
+      "$ref": "_defs.schema.json#/$defs/timestamp"
+    },
+    "synthetic": {
+      "type": "boolean"
+    },
+    "missing": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "_defs.schema.json#/$defs/text"
+      }
+    }
+  },
+  "$defs": {},
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "final": {
+            "const": "BET"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "evidence_id",
+          "final_bets"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "skip_analysis"
+              ]
+            },
+            {
+              "required": [
+                "missing"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "final": {
+            "const": "SKIP"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "evidence_id",
+          "skip_analysis"
+        ],
+        "properties": {
+          "changes": {
+            "maxItems": 0
+          }
+        },
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "final_bets"
+              ]
+            },
+            {
+              "required": [
+                "missing"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "final": {
+            "const": "INCOMPLETE"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "missing"
+        ],
+        "properties": {
+          "changes": {
+            "maxItems": 0
+          }
+        },
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "final_bets"
+              ]
+            },
+            {
+              "required": [
+                "skip_analysis"
+              ]
+            }
+          ]
+        },
+        "description": "No valid BET/SKIP decision existed before the cutoff. No betting execution."
+      }
+    }
+  ]
+}

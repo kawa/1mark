@@ -1,0 +1,278 @@
+{
+  "schema_version": "1.0.0",
+  "synthetic": true,
+  "task": {
+    "schema_version": "1.0.0",
+    "task_id": "SYN-TASK-1",
+    "task_type": "predict",
+    "race_id": "20000101-01-01",
+    "scheduled_start": "2000-01-01T15:00:00+09:00",
+    "prediction_cutoff": "2000-01-01T14:50:00+09:00",
+    "synthetic": true
+  },
+  "evidence": [
+    {
+      "schema_version": "1.0.0",
+      "vocabulary_version": "1.0.0",
+      "evidence_id": "SYN-EV-1",
+      "race_id": "20000101-01-01",
+      "synthetic": true,
+      "observations": [
+        {
+          "id": "o1",
+          "field": "x-syn:national_win_rate",
+          "value": 7.1,
+          "raw_value": "7.1",
+          "source_url": "https://example.invalid/synthetic/o1",
+          "observed_at": "2000-01-01T10:00:00+09:00",
+          "phase": "pre_race",
+          "boat": 1
+        },
+        {
+          "id": "o2",
+          "field": "x-syn:national_win_rate",
+          "value": 4.2,
+          "raw_value": "4.2",
+          "source_url": "https://example.invalid/synthetic/o2",
+          "observed_at": "2000-01-01T10:00:00+09:00",
+          "phase": "pre_race",
+          "boat": 4
+        },
+        {
+          "id": "o3",
+          "field": "wind_speed_mps",
+          "value": 2,
+          "raw_value": "2",
+          "source_url": "https://example.invalid/synthetic/o3",
+          "observed_at": "2000-01-01T10:00:00+09:00",
+          "phase": "pre_race"
+        },
+        {
+          "id": "o4",
+          "field": "motor_top2_rate",
+          "value": 45.5,
+          "raw_value": "45.5",
+          "source_url": "https://example.invalid/synthetic/o4",
+          "observed_at": "2000-01-01T10:00:00+09:00",
+          "phase": "pre_race",
+          "boat": 1
+        }
+      ],
+      "inferences": [
+        {
+          "id": "i1",
+          "statement": "SYNTHETIC: boat 1 likely strong from the inside course",
+          "based_on": [
+            "o1",
+            "o4"
+          ]
+        }
+      ],
+      "missing_data": [
+        {
+          "field": "exhibition_time",
+          "reason": "SYNTHETIC: exhibition not yet held"
+        }
+      ]
+    }
+  ],
+  "prediction": {
+    "schema_version": "1.0.0",
+    "protocol_version": "1.0.0",
+    "knowledge_version": "none",
+    "task_id": "SYN-TASK-1",
+    "race_id": "20000101-01-01",
+    "evidence_id": "SYN-EV-1",
+    "locked_at": "2000-01-01T14:45:00+09:00",
+    "synthetic": true,
+    "prediction_id": "SYN-PRED-PRE",
+    "status": "PRE",
+    "boat_assessments": [
+      {
+        "boat": 1,
+        "assessment": "strong",
+        "rationale": "SYNTHETIC rationale for boat 1",
+        "evidence_ids": [
+          "o1",
+          "i1"
+        ]
+      },
+      {
+        "boat": 2,
+        "assessment": "moderate",
+        "rationale": "SYNTHETIC rationale for boat 2",
+        "evidence_ids": []
+      },
+      {
+        "boat": 3,
+        "assessment": "weak",
+        "rationale": "SYNTHETIC rationale for boat 3",
+        "evidence_ids": []
+      },
+      {
+        "boat": 4,
+        "assessment": "moderate",
+        "rationale": "SYNTHETIC rationale for boat 4",
+        "evidence_ids": []
+      },
+      {
+        "boat": 5,
+        "assessment": "weak",
+        "rationale": "SYNTHETIC rationale for boat 5",
+        "evidence_ids": []
+      },
+      {
+        "boat": 6,
+        "assessment": "weak",
+        "rationale": "SYNTHETIC rationale for boat 6",
+        "evidence_ids": []
+      }
+    ],
+    "bets": [
+      {
+        "bet_type": "trifecta",
+        "combination": [
+          1,
+          2,
+          4
+        ],
+        "units": 3
+      },
+      {
+        "bet_type": "trio",
+        "combination": [
+          1,
+          2,
+          4
+        ],
+        "units": 2
+      }
+    ]
+  },
+  "risk_decision": {
+    "schema_version": "1.0.0",
+    "risk_decision_id": "SYN-RISK-1",
+    "subject_type": "prediction",
+    "subject_id": "SYN-PRED-PRE",
+    "subject_sha256": "2e889e6629e376a1fb071d29f921d1a99456e1d473c92a6e7f74feec659789d3",
+    "config_version": "1.0.0",
+    "decision": "approved",
+    "total_stake_jpy": 500,
+    "decided_at": "2000-01-01T14:48:00+09:00",
+    "synthetic": true
+  },
+  "review": {
+    "schema_version": "1.0.0",
+    "protocol_version": "1.0.0",
+    "review_id": "SYN-REV-U",
+    "prediction_id": "SYN-PRED-PRE",
+    "prediction_sha256": "2e889e6629e376a1fb071d29f921d1a99456e1d473c92a6e7f74feec659789d3",
+    "race_id": "20000101-01-01",
+    "result": {
+      "finish_order": [
+        1,
+        4,
+        2
+      ],
+      "payouts": [
+        {
+          "bet_type": "trio",
+          "combination": [
+            1,
+            2,
+            4
+          ],
+          "payout_per_100_jpy": 380
+        }
+      ],
+      "refund_info": {
+        "status": "unavailable",
+        "race_wide": false,
+        "refunded": []
+      },
+      "source_url": "https://example.invalid/synthetic/result",
+      "confirmed_at": "2000-01-01T15:10:00+09:00"
+    },
+    "outcome": {
+      "bet_results": [
+        {
+          "bet_type": "trifecta",
+          "combination": [
+            1,
+            2,
+            4
+          ],
+          "hit": false
+        },
+        {
+          "bet_type": "trio",
+          "combination": [
+            1,
+            2,
+            4
+          ],
+          "hit": true
+        }
+      ]
+    },
+    "prediction_error": {
+      "summary": "SYNTHETIC: boat 4 underrated",
+      "boat_errors": [
+        {
+          "boat": 4,
+          "note": "finished 2nd despite a weak assessment"
+        }
+      ]
+    },
+    "decision_quality": {
+      "rating": "acceptable",
+      "rationale": "SYNTHETIC: sound given pre-race information"
+    },
+    "protocol_compliance": {
+      "checks": [
+        {
+          "rule": "bets locked before cutoff",
+          "passed": true
+        },
+        {
+          "rule": "no post-race evidence used",
+          "passed": true
+        }
+      ]
+    },
+    "learning_proposal_ids": [],
+    "synthetic": true,
+    "settlement": {
+      "status": "unresolved",
+      "risk_decision_id": "SYN-RISK-1",
+      "risk_decision_sha256": "09ada147ed2098268503abf691b8e547a8c101f2b4095e8b0201888a70a8f3a6",
+      "lines": [
+        {
+          "bet_type": "trifecta",
+          "combination": [
+            1,
+            2,
+            4
+          ],
+          "units": 3,
+          "stake_jpy": 300,
+          "status": "unresolved"
+        },
+        {
+          "bet_type": "trio",
+          "combination": [
+            1,
+            2,
+            4
+          ],
+          "units": 2,
+          "stake_jpy": 200,
+          "status": "win",
+          "returned_jpy": 760
+        }
+      ],
+      "total_stake_jpy": 500,
+      "unresolved_reason": "SYNTHETIC: refund information unavailable"
+    }
+  }
+}

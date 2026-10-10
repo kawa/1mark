@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kawa/1mark/schemas/risk_decision.schema.json",
+  "title": "Risk decision: approve or reject a complete proposed execution. Never modifies it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "risk_decision_id",
+    "subject_type",
+    "subject_id",
+    "subject_sha256",
+    "config_version",
+    "decision",
+    "decided_at",
+    "synthetic"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "risk_decision_id": {
+      "$ref": "_defs.schema.json#/$defs/id"
+    },
+    "subject_type": {
+      "enum": [
+        "prediction",
+        "decision"
+      ],
+      "description": "A PRE prediction, or a post-exhibition decision with final BET"
+    },
+    "subject_id": {
+      "$ref": "_defs.schema.json#/$defs/id"
+    },
+    "subject_sha256": {
+      "$ref": "_defs.schema.json#/$defs/sha256"
+    },
+    "config_version": {
+      "$ref": "_defs.schema.json#/$defs/semver"
+    },
+    "decision": {
+      "enum": [
+        "approved",
+        "rejected"
+      ]
+    },
+    "total_stake_jpy": {
+      "$ref": "_defs.schema.json#/$defs/stake_jpy"
+    },
+    "reason": {
+      "$ref": "_defs.schema.json#/$defs/text"
+    },
+    "decided_at": {
+      "$ref": "_defs.schema.json#/$defs/timestamp"
+    },
+    "synthetic": {
+      "type": "boolean"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "approved"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "total_stake_jpy"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "rejected"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "reason"
+        ],
+        "not": {
+          "required": [
+            "total_stake_jpy"
+          ]
+        }
+      }
+    }
+  ]
+}

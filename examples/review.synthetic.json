@@ -1,0 +1,128 @@
+{
+  "schema_version": "1.0.0",
+  "protocol_version": "1.0.0",
+  "review_id": "SYN-REV-1",
+  "prediction_id": "SYN-PRED-PRE",
+  "prediction_sha256": "2e889e6629e376a1fb071d29f921d1a99456e1d473c92a6e7f74feec659789d3",
+  "race_id": "20000101-01-01",
+  "result": {
+    "finish_order": [
+      1,
+      4,
+      2
+    ],
+    "payouts": [
+      {
+        "bet_type": "trifecta",
+        "combination": [
+          1,
+          4,
+          2
+        ],
+        "payout_per_100_jpy": 1230
+      },
+      {
+        "bet_type": "trio",
+        "combination": [
+          1,
+          2,
+          4
+        ],
+        "payout_per_100_jpy": 380
+      }
+    ],
+    "refund_info": {
+      "status": "confirmed",
+      "race_wide": false,
+      "refunded": [],
+      "source_url": "https://example.invalid/synthetic/refunds"
+    },
+    "source_url": "https://example.invalid/synthetic/result",
+    "confirmed_at": "2000-01-01T15:10:00+09:00"
+  },
+  "outcome": {
+    "bet_results": [
+      {
+        "bet_type": "trifecta",
+        "combination": [
+          1,
+          2,
+          4
+        ],
+        "hit": false
+      },
+      {
+        "bet_type": "trio",
+        "combination": [
+          1,
+          2,
+          4
+        ],
+        "hit": true
+      }
+    ]
+  },
+  "prediction_error": {
+    "summary": "SYNTHETIC: boat 4 underrated",
+    "boat_errors": [
+      {
+        "boat": 4,
+        "note": "finished 2nd despite a weak assessment"
+      }
+    ]
+  },
+  "decision_quality": {
+    "rating": "acceptable",
+    "rationale": "SYNTHETIC: sound given pre-race information"
+  },
+  "protocol_compliance": {
+    "checks": [
+      {
+        "rule": "bets locked before cutoff",
+        "passed": true
+      },
+      {
+        "rule": "no post-race evidence used",
+        "passed": true
+      }
+    ]
+  },
+  "learning_proposal_ids": [
+    "SYN-LP-1"
+  ],
+  "synthetic": true,
+  "settlement": {
+    "status": "resolved",
+    "risk_decision_id": "SYN-RISK-1",
+    "risk_decision_sha256": "09ada147ed2098268503abf691b8e547a8c101f2b4095e8b0201888a70a8f3a6",
+    "lines": [
+      {
+        "bet_type": "trifecta",
+        "combination": [
+          1,
+          2,
+          4
+        ],
+        "units": 3,
+        "stake_jpy": 300,
+        "status": "miss",
+        "returned_jpy": 0
+      },
+      {
+        "bet_type": "trio",
+        "combination": [
+          1,
+          2,
+          4
+        ],
+        "units": 2,
+        "stake_jpy": 200,
+        "status": "win",
+        "returned_jpy": 760
+      }
+    ],
+    "total_stake_jpy": 500,
+    "total_returned_jpy": 760,
+    "profit_jpy": 260
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "risk_decision_id": "SYN-RISK-1",
+  "subject_type": "prediction",
+  "subject_id": "SYN-PRED-PRE",
+  "subject_sha256": "2e889e6629e376a1fb071d29f921d1a99456e1d473c92a6e7f74feec659789d3",
+  "config_version": "1.0.0",
+  "decision": "approved",
+  "total_stake_jpy": 500,
+  "decided_at": "2000-01-01T14:48:00+09:00",
+  "synthetic": true
+}

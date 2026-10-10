@@ -1,0 +1,87 @@
+{
+  "schema_version": "1.0.0",
+  "protocol_version": "1.0.0",
+  "knowledge_version": "none",
+  "task_id": "SYN-TASK-1",
+  "race_id": "20000101-01-01",
+  "baseline_prediction_id": "SYN-PRED-WAIT",
+  "baseline_sha256": "1306ed0fafdb071f1674c37daa7ec2c2586954e5da3232e7672c6617816d8d70",
+  "evidence_id": "SYN-EV-2",
+  "locked_at": "2000-01-01T14:40:00+09:00",
+  "synthetic": true,
+  "decision_id": "SYN-DEC-BET",
+  "final": "BET",
+  "changes": [
+    {
+      "action": "add",
+      "bet_type": "trifecta",
+      "combination": [
+        4,
+        1,
+        2
+      ],
+      "units": 2,
+      "plan_step_ids": [
+        "step-1"
+      ],
+      "evidence_ids": [
+        "e1",
+        "e2",
+        "ei1"
+      ],
+      "reason": "SYNTHETIC: boat 4 exhibition faster than boat 1"
+    },
+    {
+      "action": "change_units",
+      "bet_type": "trio",
+      "combination": [
+        1,
+        2,
+        4
+      ],
+      "units": 1,
+      "plan_step_ids": [
+        "step-1"
+      ],
+      "evidence_ids": [
+        "e1"
+      ],
+      "reason": "SYNTHETIC: less confidence in boat 1 leading"
+    },
+    {
+      "action": "remove",
+      "bet_type": "trifecta",
+      "combination": [
+        1,
+        2,
+        4
+      ],
+      "plan_step_ids": [],
+      "evidence_ids": [
+        "e1",
+        "ei1"
+      ],
+      "reason": "SYNTHETIC: unplanned removal after slow exhibition"
+    }
+  ],
+  "final_bets": [
+    {
+      "bet_type": "trio",
+      "combination": [
+        1,
+        2,
+        4
+      ],
+      "units": 1
+    },
+    {
+      "bet_type": "trifecta",
+      "combination": [
+        4,
+        1,
+        2
+      ],
+      "units": 2
+    }
+  ]
+}

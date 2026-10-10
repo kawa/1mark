@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "protocol_version": "1.0.0",
+  "knowledge_version": "none",
+  "task_id": "SYN-TASK-1",
+  "race_id": "20000101-01-01",
+  "evidence_id": "SYN-EV-1",
+  "locked_at": "2000-01-01T10:30:00+09:00",
+  "synthetic": true,
+  "prediction_id": "SYN-PRED-INC",
+  "status": "INCOMPLETE",
+  "missing": [
+    "boat 5 and 6 evidence"
+  ]
+}

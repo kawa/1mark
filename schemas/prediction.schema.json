@@ -1,0 +1,434 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kawa/1mark/schemas/prediction.schema.json",
+  "title": "Prediction record (qualitative in v0.1; no bankroll or stake amounts)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "protocol_version",
+    "knowledge_version",
+    "prediction_id",
+    "task_id",
+    "race_id",
+    "evidence_id",
+    "status",
+    "locked_at",
+    "synthetic"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "protocol_version": {
+      "$ref": "_defs.schema.json#/$defs/semver"
+    },
+    "knowledge_version": {
+      "$ref": "_defs.schema.json#/$defs/id",
+      "description": "Identifier of the validated knowledge snapshot used, or 'none'"
+    },
+    "prediction_id": {
+      "$ref": "_defs.schema.json#/$defs/id"
+    },
+    "task_id": {
+      "$ref": "_defs.schema.json#/$defs/id"
+    },
+    "race_id": {
+      "$ref": "_defs.schema.json#/$defs/race_id"
+    },
+    "evidence_id": {
+      "$ref": "_defs.schema.json#/$defs/id"
+    },
+    "status": {
+      "enum": [
+        "PRE",
+        "WAIT",
+        "SKIP",
+        "UNAVAILABLE",
+        "INCOMPLETE"
+      ]
+    },
+    "locked_at": {
+      "$ref": "_defs.schema.json#/$defs/timestamp"
+    },
+    "synthetic": {
+      "type": "boolean"
+    },
+    "boat_assessments": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/assessment",
+          "properties": {
+            "boat": {
+              "const": 1
+            }
+          }
+        },
+        {
+          "$ref": "#/$defs/assessment",
+          "properties": {
+            "boat": {
+              "const": 2
+            }
+          }
+        },
+        {
+          "$ref": "#/$defs/assessment",
+          "properties": {
+            "boat": {
+              "const": 3
+            }
+          }
+        },
+        {
+          "$ref": "#/$defs/assessment",
+          "properties": {
+            "boat": {
+              "const": 4
+            }
+          }
+        },
+        {
+          "$ref": "#/$defs/assessment",
+          "properties": {
+            "boat": {
+              "const": 5
+            }
+          }
+        },
+        {
+          "$ref": "#/$defs/assessment",
+          "properties": {
+            "boat": {
+              "const": 6
+            }
+          }
+        }
+      ],
+      "items": false
+    },
+    "bets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "_defs.schema.json#/$defs/bet"
+      }
+    },
+    "wait_plan": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "step_id",
+          "observation",
+          "decision_threshold",
+          "expected_operations"
+        ],
+        "properties": {
+          "step_id": {
+            "$ref": "_defs.schema.json#/$defs/id"
+          },
+          "observation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "field",
+              "source"
+            ],
+            "properties": {
+              "field": {
+                "$ref": "_defs.schema.json#/$defs/field_name"
+              },
+              "boat": {
+                "$ref": "_defs.schema.json#/$defs/boat"
+              },
+              "source": {
+                "$ref": "_defs.schema.json#/$defs/text"
+              }
+            }
+          },
+          "decision_threshold": {
+            "$ref": "_defs.schema.json#/$defs/text"
+          },
+          "expected_operations": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "_defs.schema.json#/$defs/bet_operation"
+            }
+          }
+        }
+      }
+    },
+    "skip_analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reason",
+        "evidence_ids"
+      ],
+      "properties": {
+        "reason": {
+          "$ref": "_defs.schema.json#/$defs/text"
+        },
+        "evidence_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "_defs.schema.json#/$defs/id"
+          }
+        }
+      }
+    },
+    "unavailable_reason": {
+      "$ref": "_defs.schema.json#/$defs/text"
+    },
+    "missing": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "_defs.schema.json#/$defs/text"
+      }
+    }
+  },
+  "$defs": {
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "boat",
+        "assessment",
+        "rationale",
+        "evidence_ids"
+      ],
+      "properties": {
+        "boat": {
+          "$ref": "_defs.schema.json#/$defs/boat"
+        },
+        "rationale": {
+          "$ref": "_defs.schema.json#/$defs/text"
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "_defs.schema.json#/$defs/id"
+          }
+        },
+        "assessment": {
+          "enum": [
+            "strong",
+            "moderate",
+            "weak"
+          ],
+          "description": "Qualitative view of the boat's chance. Numerical probabilities are not used in v0.1."
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "PRE"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "boat_assessments",
+          "bets"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "wait_plan"
+              ]
+            },
+            {
+              "required": [
+                "skip_analysis"
+              ]
+            },
+            {
+              "required": [
+                "unavailable_reason"
+              ]
+            },
+            {
+              "required": [
+                "missing"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "WAIT"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "boat_assessments",
+          "bets",
+          "wait_plan"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "skip_analysis"
+              ]
+            },
+            {
+              "required": [
+                "unavailable_reason"
+              ]
+            },
+            {
+              "required": [
+                "missing"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "SKIP"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "boat_assessments",
+          "skip_analysis"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "bets"
+              ]
+            },
+            {
+              "required": [
+                "wait_plan"
+              ]
+            },
+            {
+              "required": [
+                "unavailable_reason"
+              ]
+            },
+            {
+              "required": [
+                "missing"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "UNAVAILABLE"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "unavailable_reason"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "boat_assessments"
+              ]
+            },
+            {
+              "required": [
+                "bets"
+              ]
+            },
+            {
+              "required": [
+                "wait_plan"
+              ]
+            },
+            {
+              "required": [
+                "skip_analysis"
+              ]
+            },
+            {
+              "required": [
+                "missing"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "INCOMPLETE"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "missing"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "boat_assessments"
+              ]
+            },
+            {
+              "required": [
+                "bets"
+              ]
+            },
+            {
+              "required": [
+                "wait_plan"
+              ]
+            },
+            {
+              "required": [
+                "skip_analysis"
+              ]
+            },
+            {
+              "required": [
+                "unavailable_reason"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

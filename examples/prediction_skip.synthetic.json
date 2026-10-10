@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0.0",
+  "protocol_version": "1.0.0",
+  "knowledge_version": "none",
+  "task_id": "SYN-TASK-1",
+  "race_id": "20000101-01-01",
+  "evidence_id": "SYN-EV-1",
+  "locked_at": "2000-01-01T10:30:00+09:00",
+  "synthetic": true,
+  "prediction_id": "SYN-PRED-SKIP",
+  "status": "SKIP",
+  "boat_assessments": [
+    {
+      "boat": 1,
+      "assessment": "strong",
+      "rationale": "SYNTHETIC rationale for boat 1",
+      "evidence_ids": [
+        "o1",
+        "i1"
+      ]
+    },
+    {
+      "boat": 2,
+      "assessment": "moderate",
+      "rationale": "SYNTHETIC rationale for boat 2",
+      "evidence_ids": []
+    },
+    {
+      "boat": 3,
+      "assessment": "weak",
+      "rationale": "SYNTHETIC rationale for boat 3",
+      "evidence_ids": []
+    },
+    {
+      "boat": 4,
+      "assessment": "moderate",
+      "rationale": "SYNTHETIC rationale for boat 4",
+      "evidence_ids": []
+    },
+    {
+      "boat": 5,
+      "assessment": "weak",
+      "rationale": "SYNTHETIC rationale for boat 5",
+      "evidence_ids": []
+    },
+    {
+      "boat": 6,
+      "assessment": "weak",
+      "rationale": "SYNTHETIC rationale for boat 6",
+      "evidence_ids": []
+    }
+  ],
+  "skip_analysis": {
+    "reason": "SYNTHETIC: no combination offers a defensible edge after analysis",
+    "evidence_ids": [
+      "o1",
+      "o3"
+    ]
+  }
+}

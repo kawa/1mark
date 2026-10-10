@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kawa/1mark/schemas/learning_proposal.schema.json",
+  "title": "Learning proposal: never applied automatically",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "proposal_id", "target", "proposal", "evidence", "status", "synthetic"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "proposal_id": {"$ref": "_defs.schema.json#/$defs/id"},
+    "target": {"enum": ["knowledge", "protocol"]},
+    "proposal": {"$ref": "_defs.schema.json#/$defs/text"},
+    "evidence": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false,
+      "required": ["review_id", "observation"],
+      "properties": {"review_id": {"$ref": "_defs.schema.json#/$defs/id"}, "observation": {"$ref": "_defs.schema.json#/$defs/text"}}}},
+    "status": {"const": "proposed", "description": "Only humans change this, via PR, by moving the item into knowledge/ or protocols/"},
+    "synthetic": {"type": "boolean"}
+  }
+}
