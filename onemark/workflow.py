@@ -213,7 +213,7 @@ def batch_summary_errors(doc, predictions=None):
             if (p["status"], p["prediction_id"], v.canonical_sha256(p)) != (
                     r.get("status"), r.get("prediction_id"), r.get("prediction_sha256")):
                 errors.append(f"{rid}: summary does not match prediction")
-            elif r.get("status") == "PRE" and {k: u for k, u in _bets(p).items()} != \
+            elif r.get("status") == "PRE" and _bets(p) != \
                     {v._key(b): b["units"] for b in r["bets"]}:
                 errors.append(f"{rid}: summary bets differ from prediction")
     return errors
@@ -225,6 +225,8 @@ def build_batch_zip(batch_dir, out, batch_id=None):
     packages = {}
     for rno in range(1, 13):
         found = sorted((batch_dir / f"race-{rno:02d}").glob("prediction-package-*.zip"))
+        if len(found) > 1:
+            raise ValueError(f"race-{rno:02d} has multiple package ZIPs; keep exactly one")
         if found:
             packages[rno] = found[0]
     files = {f"race-{n:02d}/{p.name}": p.read_bytes() for n, p in packages.items()}

@@ -163,4 +163,4 @@ def test_batch_zip(tmp_path):
     z = zipfile.ZipFile(out)
     assert set(wf.BATCH_FILES) <= set(z.namelist()) and len(m["missing_races"]) == 10
     text = z.read("START_HERE.md").decode()
-    assert "never as SKIP" in text.replace("Never report it as SKIP", "never as SKIP") and "WAIT_SWITCHED_TO_PRE" in text
+    assert "Never report it as SKIP" in text and "WAIT_SWITCHED_TO_PRE" in text
