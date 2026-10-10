@@ -55,7 +55,7 @@ def fetch(url, retries=2, interval=3.0, timeout=20, opener=urllib.request.urlope
             return body
         except urllib.error.HTTPError as e:
             last = FetchError(f"HTTP {e.code} for {url}")
-            if e.code in (401, 403, 429) and e.code != 429:
+            if e.code in (401, 403, 429):
                 raise last
         except FetchError:
             raise

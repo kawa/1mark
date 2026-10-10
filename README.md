@@ -8,4 +8,6 @@ Prediction and evaluation framework for Japanese boat racing (kyotei), designed 
 - `knowledge/validated/` vs `knowledge/proposals/`; `evidence/`; `tasks/`
 - `examples/` synthetic data only (`*.synthetic.json`)
 
+BOAT RACE racelist PoC: `python -m onemark.boatrace --date YYYYMMDD --jcd 02 --rno 1` (or the manual "BOAT RACE racelist ingestion" workflow).
+
 Test: `pip install -r requirements.txt && pytest`
