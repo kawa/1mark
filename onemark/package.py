@@ -10,6 +10,7 @@ import sys
 import zipfile
 from pathlib import Path
 
+from onemark import deadline
 from onemark import validate as v
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -43,6 +44,8 @@ You are a stateless AI session. This package is your complete task.
 ## Task
 Race `{race_id}`, phase `{phase}`. See `task.json` for the objective and output requirements.
 Timing: `evidence_cutoff` is the latest information available; it is not the betting deadline. If `betting_deadline` is null/unknown, `execution_allowed` is false: do not treat any output as executable.
+Schedule: when `manifest.json` has `schedule`, `betting_deadline` is the OFFICIAL deadline (with `raw_time`, `source_url`, `retrieved_at`);
+`estimated_exhibition_check_time` is only an ESTIMATE (deadline minus offset), not an official exhibition start time. `unknown` means unavailable. A known deadline does not approve betting (`execution_allowed` stays false; risk approval is separate).
 Integrity: verify file hashes against `manifest.json`.
 """
 
@@ -84,7 +87,7 @@ def derive_evidence_cutoff(evidence):
     return max(observed, key=v.parse_ts)
 
 
-def build_task(evidence, evidence_cutoff, betting_deadline, phase, scheduled_start=None):
+def build_task(evidence, evidence_cutoff, betting_deadline, phase, scheduled_start=None, execution_allowed=None):
     race_id = evidence["race_id"]
     task = {
         "schema_version": "1.0.0",
@@ -94,7 +97,7 @@ def build_task(evidence, evidence_cutoff, betting_deadline, phase, scheduled_sta
         "prediction_cutoff": evidence_cutoff,
         "evidence_cutoff": evidence_cutoff,
         "betting_deadline": betting_deadline,
-        "execution_allowed": betting_deadline is not None,
+        "execution_allowed": betting_deadline is not None if execution_allowed is None else execution_allowed,
         "synthetic": bool(evidence["synthetic"]),
         "prediction_phase": phase,
         "objective": f"Produce one prediction for race {race_id} following protocol.md, using only evidence.json.",
@@ -115,8 +118,16 @@ def _json(doc) -> bytes:
     return (json.dumps(doc, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
 
-def build_files(evidence_path, evidence_cutoff=None, betting_deadline=None, phase="pre_race", scheduled_start=None):
-    """Return {name: bytes}. Raises PackageError on any invalid or missing input."""
+def build_files(evidence_path, evidence_cutoff=None, betting_deadline=None, phase="pre_race", scheduled_start=None,
+                schedule=None, offset_minutes=deadline.DEFAULT_EXHIBITION_OFFSET_MINUTES):
+    """Return {name: bytes}. Raises PackageError on any invalid or missing input.
+
+    `schedule` is an optional onemark.deadline entry (official deadline + provenance). It supplies betting_deadline
+    when none is given explicitly, and is recorded in the manifest with the estimated exhibition check time.
+    A known deadline from `schedule` never sets execution_allowed: risk approval stays separate.
+    """
+    if schedule is not None and betting_deadline is None:
+        betting_deadline = schedule.get("betting_deadline")
     try:
         raw = Path(evidence_path).read_bytes()
         evidence = json.loads(raw)
@@ -129,7 +140,8 @@ def build_files(evidence_path, evidence_cutoff=None, betting_deadline=None, phas
     if errors:
         raise PackageError("evidence errors: " + "; ".join(errors))
     evidence_cutoff = evidence_cutoff or derive_evidence_cutoff(evidence)
-    task = build_task(evidence, evidence_cutoff, betting_deadline, phase, scheduled_start)
+    task = build_task(evidence, evidence_cutoff, betting_deadline, phase, scheduled_start,
+                      execution_allowed=False if schedule is not None else None)
     errors = v.schema_errors("task", task) or v.leak_errors(task, evidence)
     if not errors and betting_deadline and v.parse_ts(evidence_cutoff) > v.parse_ts(betting_deadline):
         errors.append("evidence_cutoff is after betting_deadline")
@@ -149,13 +161,14 @@ def build_files(evidence_path, evidence_cutoff=None, betting_deadline=None, phas
                                            race_id=task["race_id"], phase=phase).encode("utf-8"),
     }
     observed = [o["observed_at"] for o in evidence["observations"]]
+    execution_allowed = task["execution_allowed"]
     manifest = {
         "package_version": PACKAGE_VERSION,
         "race_id": task["race_id"],
         "prediction_phase": phase,
         "evidence_cutoff": evidence_cutoff,
         "betting_deadline": betting_deadline or "unknown",
-        "execution_allowed": betting_deadline is not None,
+        "execution_allowed": execution_allowed,
         "protocol_version": pver,
         "knowledge_version": kver,
         "evidence_id": evidence["evidence_id"],
@@ -171,6 +184,14 @@ def build_files(evidence_path, evidence_cutoff=None, betting_deadline=None, phas
         },
         "files": {name: {"sha256": sha256(data), "bytes": len(data)} for name, data in sorted(files.items())},
     }
+    if schedule is not None:
+        manifest["schedule"] = {
+            "betting_deadline": schedule.get("betting_deadline") or "unknown",
+            "betting_deadline_status": schedule.get("status", "unknown"),
+            "raw_time": schedule.get("raw_time"), "source_url": schedule.get("source_url"),
+            "retrieved_at": schedule.get("retrieved_at"), "reason": schedule.get("reason"),
+            "estimated_exhibition_check_time": deadline.estimate_exhibition(schedule, offset_minutes),
+        }
     files["manifest.json"] = _json(manifest)
     return files
 

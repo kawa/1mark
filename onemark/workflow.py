@@ -10,12 +10,13 @@ import zipfile
 from datetime import timedelta
 from pathlib import Path
 
+from onemark import deadline
 from onemark import package as pkg
 from onemark import validate as v
 
 # Documented default: exhibition viewing is assumed this many minutes before the betting deadline.
 # It is only an estimate (labelled estimated_from_betting_deadline) and can be overridden per call/CLI.
-DEFAULT_EXHIBITION_OFFSET_MINUTES = 10
+DEFAULT_EXHIBITION_OFFSET_MINUTES = deadline.DEFAULT_EXHIBITION_OFFSET_MINUTES
 
 TRANSITIONS = {
     "UNDECIDED": {"PRE_PURCHASED", "WAIT_SELECTED"},
@@ -33,26 +34,31 @@ You are a stateless AI session in ONE conversation. Do not rely on prior convers
    and follow its own `START_HERE.md` / `protocol.md` exactly. This file adds no prediction rules.
    Races in `manifest.json` `failed_races` (ingestion stage + error) or `missing_races` have no package: report each as
    `processing: FAILED` with that stage and error. Never treat them as SKIP and never predict them from memory.
-2. Analyze EVERY race using only its package. Never require exhibition data for the initial prediction.
+2. Analyze all 12 races independently, using only each race's package. Never require exhibition data for the initial prediction.
 3. Produce one prediction JSON per race (PRE or SKIP; combinations, units, reasoning), validated against `prediction.schema.json`.
 4. Produce one `batch_summary` JSON (`batch_summary.schema.json`): per race the status (PRE/SKIP), combinations, units,
    `exhibition_time` and `data_limitations`. Exhibition time: `official` only if an official schedule is in the package;
    `estimated_from_betting_deadline` (with `offset_minutes`, clearly labelled estimate) if only a betting deadline is known;
    otherwise `unknown`. Never invent a time and never present an estimate as official. Do not ask the user for per-race times.
+   The schedule is in `manifest.json` `schedule` (per race): `betting_deadline` is the OFFICIAL BOAT RACE deadline (締切予定時刻;
+   `raw_time`, `source_url`, `retrieved_at` give provenance) and `estimated_exhibition_check_time` is an ESTIMATE
+   (deadline minus `offset_minutes`, default 20), not an official exhibition start time. `unknown` means the schedule was
+   unavailable; that is a data limitation, NOT a SKIP. A known deadline does not approve betting.
 5. A race you could not process is `processing: FAILED` with `failure.stage` and `failure.error`. Never report it as SKIP,
    and do not guess a status. Report these races explicitly in the text summary too.
-6. Show the user a concise table of the summary (race, PRE/SKIP, combinations, units, exhibition time with its
-   official / estimated / unknown label, data limitations, failed races). Prediction units are independent of bankroll.
+6. Complete PRE/SKIP for all races BEFORE waiting for exhibition. Show the user a concise table of the summary (race, PRE/SKIP,
+   combinations, units, official betting deadline, estimated exhibition check time labelled official / estimated / unknown,
+   data limitations, failed races). Prediction units are independent of bankroll.
 7. Then STOP and wait for the user. Do not start exhibition follow-ups on your own.
 
 ## Stage 2: user decides
-The user buys PRE predictions they want now and chooses which others to hold (WAIT) for exhibition.
+The user chooses which races to purchase immediately (PRE) and which to hold (WAIT) for exhibition.
 WAIT is a user selection, not a prediction status. Record it in a `workflow_state` JSON; never edit the original PRE prediction.
 The user may switch WAIT back to the original PRE if exhibition cannot be viewed (state `WAIT_SWITCHED_TO_PRE`).
 Purchasing is the user's action; you never place bets.
 
 ## Stage 3: exhibition follow-up (same conversation)
-When the user posts exhibition results:
+Reassess ONLY the races the user selected as WAIT, when the user posts exhibition results:
 1. Identify the race. If ambiguous, ask (outcome `NEEDS_CLARIFICATION`, `candidate_race_ids`).
 2. Parse entry course, exhibition time, exhibition ST, weather and other observations as given; keep the original text in `raw`
    and the `source`. Never invent missing items; list them in `missing_observations`.
@@ -60,7 +66,7 @@ When the user posts exhibition results:
    exhibition ST is not a deterministic predictor of race ST).
 4. Produce an `exhibition_revision` JSON (`exhibition_revision.schema.json`) referencing the baseline `prediction_id` and `prediction_sha256`:
    `REVISED` (new prediction, PRE or SKIP, with a new prediction_id) or `RETAINED` (explain why unchanged).
-   Report changes in combinations, units and reasoning, and explain unchanged parts too.
+   Preserve the original PRE prediction; report changes in combinations, units and reasoning, and explain unchanged parts too.
 5. The user decides whether to purchase the final prediction.
 
 Validate each file: `python -m onemark.validate <file>` (names start with `prediction`, `workflow_state`, `exhibition_revision`, `batch_summary`).
@@ -243,6 +249,16 @@ def build_batch_zip(batch_dir, out, batch_id=None):
         for r in json.loads(summary_path.read_text(encoding="utf-8")).get("races", []):
             if r.get("status") == "failed":
                 failed[f"{r['rno']:02d}"] = {"stage": r.get("failure_stage"), "error": r.get("error")}
+    schedule = {}
+    schedule_path = batch_dir / "schedule.json"
+    if schedule_path.exists():
+        files["schedule.json"] = schedule_path.read_bytes()
+        for rno, e in json.loads(schedule_path.read_text(encoding="utf-8")).items():
+            schedule[f"{int(rno):02d}"] = {
+                "betting_deadline": e.get("betting_deadline") or "unknown", "status": e.get("status", "unknown"),
+                "raw_time": e.get("raw_time"), "source_url": e.get("source_url"), "retrieved_at": e.get("retrieved_at"),
+                "estimated_exhibition_check_time": deadline.estimate_exhibition(e),
+            }
     for name, src in (("workflow_state.schema.json", v.SCHEMA_DIR), ("exhibition_revision.schema.json", v.SCHEMA_DIR),
                       ("batch_summary.schema.json", v.SCHEMA_DIR), ("prediction.schema.json", v.SCHEMA_DIR),
                       ("_defs.schema.json", v.SCHEMA_DIR)):
@@ -254,6 +270,7 @@ def build_batch_zip(batch_dir, out, batch_id=None):
         "failed_races": failed,
         "missing_races": [f"{n:02d}" for n in range(1, 13) if n not in packages],
         "exhibition_offset_minutes_default": DEFAULT_EXHIBITION_OFFSET_MINUTES,
+        "schedule": schedule,
         "files": {k: {"sha256": pkg.sha256(d), "bytes": len(d)} for k, d in sorted(files.items())},
     }
     files["manifest.json"] = pkg._json(manifest)

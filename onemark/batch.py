@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from onemark import boatrace as br
+from onemark import deadline as dl
 from onemark import package as pkg
 
 RACES = range(1, 13)
@@ -26,7 +27,7 @@ class StageError(Exception):
         self.stage = stage
 
 
-def process_race(date, jcd, rno, out_dir, fetcher=br.fetch):
+def process_race(date, jcd, rno, out_dir, fetcher=br.fetch, schedule=None):
     """Run one race through all stages; returns result dict. Never raises."""
     base = f"{date}-{jcd}-{rno:02d}"
     race_dir = Path(out_dir) / f"race-{rno:02d}"
@@ -38,6 +39,9 @@ def process_race(date, jcd, rno, out_dir, fetcher=br.fetch):
             html = fetcher(url)
         except (ValueError, br.FetchError) as e:
             raise StageError("retrieval", str(e))
+        if schedule is not None and not schedule:
+            # one official racelist page lists all 12 deadlines: parse it once, no extra request
+            schedule.update(dl.parse_deadlines(html, date, jcd, url, _now()))
         race_dir.mkdir(parents=True, exist_ok=True)
         html_path = race_dir / f"racelist-{base}.html"
         html_path.write_text(html, encoding="utf-8")
@@ -54,13 +58,15 @@ def process_race(date, jcd, rno, out_dir, fetcher=br.fetch):
             raise StageError("validation", "; ".join(errors))
         zip_path = race_dir / f"prediction-package-{base}.zip"
         try:
-            pkg.write_zip(pkg.build_files(str(ev_path)), zip_path)
+            pkg.write_zip(pkg.build_files(str(ev_path), schedule=(schedule or {}).get(rno)), zip_path)
         except pkg.PackageError as e:
             raise StageError("package", str(e))
         problems = pkg.validate_zip(zip_path)
         if problems:
             raise StageError("package_validation", "; ".join(problems))
         result["package"] = f"{race_dir.name}/{zip_path.name}"
+        if schedule:
+            result["betting_deadline"] = schedule[rno]["betting_deadline"] or "unknown"
     except StageError as e:
         result.update(status="failed", failure_stage=e.stage, error=str(e), failed_at=_now())
     except Exception as e:  # keep races independent
@@ -72,15 +78,20 @@ def run_batch(date, jcd, out_dir, fetcher=br.fetch, delay=3.0, sleep=time.sleep)
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     results = []
+    schedule = {}
     for rno in RACES:
         if rno != RACES[0]:
             sleep(delay)
-        results.append(process_race(date, jcd, rno, out, fetcher))
+        results.append(process_race(date, jcd, rno, out, fetcher, schedule))
+    if schedule:
+        (out / "schedule.json").write_text(json.dumps({f"{k:02d}": v for k, v in sorted(schedule.items())},
+                                                      ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     summary = {
         "date": date, "jcd": jcd, "generated_at": _now(),
         "total": len(results),
         "succeeded": [r["rno"] for r in results if r["status"] == "success"],
         "failed": [r["rno"] for r in results if r["status"] == "failed"],
+        "schedule_status": "available" if schedule else "unknown",
         "races": results,
     }
     (out / "batch-summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
