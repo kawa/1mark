@@ -174,25 +174,26 @@ def parse_racelist(html):
             for i, suffix in ((1, "top2_rate"), (2, "top3_rate")):
                 raw = _line(cell, i)
                 f[f"{prefix}_{suffix}"] = (raw, _num(raw))
-        performance_rows = [cells[9:]] + rows[1:]
-        slot_count = max(len(row) for row in performance_rows)
         performance = []
-        for slot in range(slot_count):
-            raw_values = [
-                _cell_value(row[slot]) if slot < len(row) else None
-                for row in performance_rows
-            ]
-            if not any(raw_values):
-                continue
-            values = {}
-            for name, raw, cast in zip(
-                ("race_number", "entry_course", "start_timing", "finish_position"),
-                raw_values,
-                (int, int, float, int),
-            ):
-                normalized = _num(unicodedata.normalize("NFKC", raw), cast) if raw else None
-                values[name] = (raw, normalized)
-            performance.append({"slot": slot + 1, "fields": values})
+        if len(cells) > 9 and not _line(cells[8], 0):
+            performance_rows = [cells[9:]] + rows[1:]
+            slot_count = max(len(row) for row in performance_rows)
+            for slot in range(slot_count):
+                raw_values = [
+                    _cell_value(row[slot]) if slot < len(row) else None
+                    for row in performance_rows
+                ]
+                if not any(raw_values):
+                    continue
+                values = {}
+                for name, raw, cast in zip(
+                    ("race_number", "entry_course", "start_timing", "finish_position"),
+                    raw_values,
+                    (int, int, float, int),
+                ):
+                    normalized = _num(unicodedata.normalize("NFKC", raw), cast) if raw else None
+                    values[name] = (raw, normalized)
+                performance.append({"slot": slot + 1, "fields": values})
         entries.append({"boat": idx, "fields": f, "current_series_performance": performance})
     return entries
 
