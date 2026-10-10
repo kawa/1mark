@@ -1,0 +1,121 @@
+{
+  "schema_version": "1.0.0",
+  "protocol_version": "1.1.0",
+  "knowledge_version": "none",
+  "task_id": "SYN-TASK-1",
+  "race_id": "20000101-01-01",
+  "evidence_id": "SYN-EV-1",
+  "locked_at": "2000-01-01T10:30:00+09:00",
+  "synthetic": true,
+  "prediction_id": "SYN-PRED-V11-SKIP",
+  "status": "SKIP",
+  "boat_assessments": [
+    {
+      "boat": 1,
+      "assessment": "strong",
+      "rationale": "SYNTHETIC rationale for boat 1",
+      "evidence_ids": [
+        "o1",
+        "i1"
+      ]
+    },
+    {
+      "boat": 2,
+      "assessment": "moderate",
+      "rationale": "SYNTHETIC rationale for boat 2",
+      "evidence_ids": []
+    },
+    {
+      "boat": 3,
+      "assessment": "weak",
+      "rationale": "SYNTHETIC rationale for boat 3",
+      "evidence_ids": []
+    },
+    {
+      "boat": 4,
+      "assessment": "moderate",
+      "rationale": "SYNTHETIC rationale for boat 4",
+      "evidence_ids": []
+    },
+    {
+      "boat": 5,
+      "assessment": "weak",
+      "rationale": "SYNTHETIC rationale for boat 5",
+      "evidence_ids": []
+    },
+    {
+      "boat": 6,
+      "assessment": "weak",
+      "rationale": "SYNTHETIC rationale for boat 6",
+      "evidence_ids": []
+    }
+  ],
+  "skip_analysis": {
+    "reason": "SYNTHETIC: no combination offers a defensible edge after analysis",
+    "evidence_ids": [
+      "o1",
+      "o3"
+    ],
+    "completed_analysis": "SYNTHETIC: full evaluation completed; scenarios are too evenly matched to defend any combination"
+  },
+  "evaluation": {
+    "course_advantage": {
+      "summary": "SYNTHETIC course advantage assessed first",
+      "evidence_ids": [
+        "o1"
+      ]
+    },
+    "racer_performance": {
+      "summary": "SYNTHETIC racer performance",
+      "evidence_ids": [
+        "o1"
+      ]
+    },
+    "motor_performance": {
+      "summary": "SYNTHETIC motor performance",
+      "evidence_ids": [
+        "o1"
+      ]
+    },
+    "current_series": {
+      "summary": "SYNTHETIC current series performance",
+      "evidence_ids": []
+    },
+    "start_evidence": {
+      "summary": "SYNTHETIC start evidence",
+      "evidence_ids": []
+    },
+    "data_quality": {
+      "missing_or_contradictory": [
+        "SYNTHETIC: exhibition data not yet available; not treated as contradictory"
+      ],
+      "evidence_ids": []
+    },
+    "scenarios": [
+      {
+        "name": "inside holds",
+        "description": "SYNTHETIC boat 1 leads",
+        "finish_order": [
+          1,
+          2,
+          4
+        ]
+      },
+      {
+        "name": "outside attack",
+        "description": "SYNTHETIC boat 4 attacks",
+        "finish_order": [
+          4,
+          1,
+          2
+        ]
+      }
+    ],
+    "primary_drivers": [
+      {
+        "evidence_id": "o1",
+        "influence": "SYNTHETIC: strongest influence on ranking of boat 1"
+      }
+    ]
+  }
+}

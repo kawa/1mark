@@ -156,8 +156,58 @@ def apply_operations(baseline_bets, ops):
     return bets, errors
 
 
+def _semver(text):
+    return tuple(int(x) for x in text.split("."))
+
+
+WAIT_EVIDENCE_FIELDS = ("uncertainty", "why_relevant", "expected_change", "materiality")
+
+
+def protocol_v11_errors(pred):
+    """Prediction Protocol v1.1 rules (applies to protocol_version >= 1.1.0).
+
+    No bet count, unit total or target PRE/WAIT/SKIP ratio is imposed; only that choices are justified.
+    """
+    status = pred["status"]
+    if status not in ("PRE", "WAIT", "SKIP"):
+        return []
+    errors = []
+    if "evaluation" not in pred:
+        errors.append("protocol 1.1: evaluation is required")
+    if status == "PRE" and "timing_rationale" not in pred:
+        errors.append("protocol 1.1: PRE requires timing_rationale (why waiting adds no material value)")
+    if status == "SKIP" and "completed_analysis" not in pred.get("skip_analysis", {}):
+        errors.append("protocol 1.1: SKIP requires skip_analysis.completed_analysis")
+    if status in ("PRE", "WAIT"):
+        br = pred.get("bet_rationale")
+        if br is None:
+            errors.append("protocol 1.1: bet_rationale is required")
+        else:
+            bets = {_key(b): b["units"] for b in pred.get("bets", [])}
+            sel = [_key(s) for s in br["selections"]]
+            if len(sel) != len(set(sel)) or set(sel) != set(bets):
+                errors.append("bet_rationale.selections must explain exactly the proposed bets")
+            if br["total_units"]["units"] != sum(bets.values()):
+                errors.append("bet_rationale.total_units does not equal the sum of bet units")
+    for st in pred.get("wait_plan", []):
+        sid = st["step_id"]
+        errors += [f"{sid}: protocol 1.1 requires {k}" for k in WAIT_EVIDENCE_FIELDS if k not in st]
+        basis = st.get("threshold_basis")
+        if re.search(r"\d", st["decision_threshold"]):
+            if basis is None:
+                errors.append(f"{sid}: numerical threshold without threshold_basis (unsupported)")
+        if basis:
+            if basis["kind"] in ("protocol_rule", "validated_knowledge") and "ref" not in basis:
+                errors.append(f"{sid}: threshold_basis {basis['kind']} requires ref")
+            if basis["kind"] == "unvalidated_hypothesis" and basis.get("automatic"):
+                errors.append(f"{sid}: unvalidated hypothesis must not be an automatic decision rule")
+    return errors
+
+
 def prediction_errors(pred):
     errors = bets_errors(pred.get("bets", []))
+    if _semver(pred["protocol_version"]) >= (1, 1, 0):
+        errors += protocol_v11_errors(pred)
     steps = pred.get("wait_plan", [])
     ids = [st["step_id"] for st in steps]
     if len(ids) != len(set(ids)):
@@ -224,6 +274,11 @@ def prediction_integrity_errors(task, evidence, pred):
     known = {o["id"] for o in evidence["observations"]} | {i["id"] for i in evidence["inferences"]}
     cited = [e for a in pred.get("boat_assessments", []) for e in a["evidence_ids"]]
     cited += pred.get("skip_analysis", {}).get("evidence_ids", [])
+    ev = pred.get("evaluation", {})
+    for k, sec in ev.items():
+        if isinstance(sec, dict):
+            cited += sec.get("evidence_ids", [])
+    cited += [d["evidence_id"] for d in ev.get("primary_drivers", [])]
     errors += [f"unknown evidence id {e}" for e in cited if e not in known]
     return errors
 

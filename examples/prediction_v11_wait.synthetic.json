@@ -1,0 +1,216 @@
+{
+  "schema_version": "1.0.0",
+  "protocol_version": "1.1.0",
+  "knowledge_version": "none",
+  "task_id": "SYN-TASK-1",
+  "race_id": "20000101-01-01",
+  "evidence_id": "SYN-EV-1",
+  "locked_at": "2000-01-01T10:30:00+09:00",
+  "synthetic": true,
+  "prediction_id": "SYN-PRED-V11-WAIT",
+  "status": "WAIT",
+  "boat_assessments": [
+    {
+      "boat": 1,
+      "assessment": "strong",
+      "rationale": "SYNTHETIC rationale for boat 1",
+      "evidence_ids": [
+        "o1",
+        "i1"
+      ]
+    },
+    {
+      "boat": 2,
+      "assessment": "moderate",
+      "rationale": "SYNTHETIC rationale for boat 2",
+      "evidence_ids": []
+    },
+    {
+      "boat": 3,
+      "assessment": "weak",
+      "rationale": "SYNTHETIC rationale for boat 3",
+      "evidence_ids": []
+    },
+    {
+      "boat": 4,
+      "assessment": "moderate",
+      "rationale": "SYNTHETIC rationale for boat 4",
+      "evidence_ids": []
+    },
+    {
+      "boat": 5,
+      "assessment": "weak",
+      "rationale": "SYNTHETIC rationale for boat 5",
+      "evidence_ids": []
+    },
+    {
+      "boat": 6,
+      "assessment": "weak",
+      "rationale": "SYNTHETIC rationale for boat 6",
+      "evidence_ids": []
+    }
+  ],
+  "bets": [
+    {
+      "bet_type": "trifecta",
+      "combination": [
+        1,
+        2,
+        4
+      ],
+      "units": 3
+    },
+    {
+      "bet_type": "trio",
+      "combination": [
+        1,
+        2,
+        4
+      ],
+      "units": 2
+    }
+  ],
+  "wait_plan": [
+    {
+      "step_id": "step-1",
+      "observation": {
+        "field": "exhibition_time",
+        "boat": 1,
+        "source": "official exhibition"
+      },
+      "decision_threshold": "boat 1 exhibition time is clearly slower than boat 4 (judgment, not a numeric rule)",
+      "expected_operations": [
+        {
+          "action": "add",
+          "bet_type": "trifecta",
+          "combination": [
+            4,
+            1,
+            2
+          ],
+          "units": 2
+        },
+        {
+          "action": "change_units",
+          "bet_type": "trio",
+          "combination": [
+            1,
+            2,
+            4
+          ],
+          "units": 1
+        },
+        {
+          "action": "remove",
+          "bet_type": "trifecta",
+          "combination": [
+            1,
+            2,
+            4
+          ]
+        }
+      ],
+      "uncertainty": "SYNTHETIC: whether boat 1 can hold the inside given an unresolved motor doubt",
+      "why_relevant": "SYNTHETIC: exhibition time for boat 1 reflects current motor response",
+      "expected_change": "SYNTHETIC: shift first place from boat 1 to boat 4 by adding 4-1-2 and removing 1-2-4",
+      "materiality": "SYNTHETIC: changes the leading boat of the proposal, not only units",
+      "threshold_basis": {
+        "kind": "unvalidated_hypothesis",
+        "automatic": false
+      }
+    }
+  ],
+  "evaluation": {
+    "course_advantage": {
+      "summary": "SYNTHETIC course advantage assessed first",
+      "evidence_ids": [
+        "o1"
+      ]
+    },
+    "racer_performance": {
+      "summary": "SYNTHETIC racer performance",
+      "evidence_ids": [
+        "o1"
+      ]
+    },
+    "motor_performance": {
+      "summary": "SYNTHETIC motor performance",
+      "evidence_ids": [
+        "o1"
+      ]
+    },
+    "current_series": {
+      "summary": "SYNTHETIC current series performance",
+      "evidence_ids": []
+    },
+    "start_evidence": {
+      "summary": "SYNTHETIC start evidence",
+      "evidence_ids": []
+    },
+    "data_quality": {
+      "missing_or_contradictory": [
+        "SYNTHETIC: exhibition data not yet available; not treated as contradictory"
+      ],
+      "evidence_ids": []
+    },
+    "scenarios": [
+      {
+        "name": "inside holds",
+        "description": "SYNTHETIC boat 1 leads",
+        "finish_order": [
+          1,
+          2,
+          4
+        ]
+      },
+      {
+        "name": "outside attack",
+        "description": "SYNTHETIC boat 4 attacks",
+        "finish_order": [
+          4,
+          1,
+          2
+        ]
+      }
+    ],
+    "primary_drivers": [
+      {
+        "evidence_id": "o1",
+        "influence": "SYNTHETIC: strongest influence on ranking of boat 1"
+      }
+    ]
+  },
+  "bet_rationale": {
+    "selections": [
+      {
+        "bet_type": "trifecta",
+        "combination": [
+          1,
+          2,
+          4
+        ],
+        "reason": "SYNTHETIC reason"
+      },
+      {
+        "bet_type": "trio",
+        "combination": [
+          1,
+          2,
+          4
+        ],
+        "reason": "SYNTHETIC reason"
+      }
+    ],
+    "allocation": "SYNTHETIC: units follow scenario order",
+    "total_units": {
+      "units": 5,
+      "reason": "SYNTHETIC: total follows number of defensible scenarios, not a fixed count"
+    },
+    "exclusions": [
+      {
+        "description": "SYNTHETIC: boat 5 or 6 first",
+        "reason": "SYNTHETIC: no supporting evidence"
+      }
+    ]
+  }
+}
