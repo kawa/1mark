@@ -6,6 +6,7 @@ import pytest
 from onemark import boatrace as b
 
 HTML = (Path(__file__).parent / "fixtures" / "racelist.synthetic.html").read_text(encoding="utf-8")
+OFFICIAL_HTML = (Path(__file__).parent / "fixtures" / "racelist.20261011.toda.html").read_text(encoding="utf-8")
 URL = b.race_url("20260101", "02", 1)
 
 
@@ -28,7 +29,7 @@ def test_six_entries_and_fields():
     assert f["racer_class"][1] == "A1"
     assert f["national_win_rate"] == ("6.01", 6.01)
     assert f["motor_number"][1] == "11" and f["motor_top2_rate"][1] == 31.0
-    assert f["recent_results"][0] == "1 2 3"
+    assert "recent_results" not in f
 
 
 def test_zero_is_not_missing_but_dash_is():
@@ -87,3 +88,62 @@ def test_fullwidth_boat_number_normalized(n):
     entry = b.parse_racelist(html)[n - 1]
     assert entry["boat"] == n
     assert entry["fields"]["boat_number"] == (full, n)
+
+
+def test_official_current_series_rows_stay_aligned_for_all_boats():
+    es = b.parse_racelist(OFFICIAL_HTML)
+    expected_first_races = [
+        ("8", "2", ".09", "４"),
+        ("4", "5", ".16", "４"),
+        ("1", "2", ".25", "２"),
+        ("2", "5", ".19", "２"),
+        ("6", "6", ".15", "２"),
+        ("4", "1", ".25", "２"),
+    ]
+    assert len(es) == 6
+    assert [len(entry["current_series_performance"]) for entry in es] == [3, 3, 3, 3, 3, 3]
+    for entry, expected in zip(es, expected_first_races):
+        first = entry["current_series_performance"][0]
+        assert first["slot"] == 1
+        assert tuple(first["fields"][key][0] for key in (
+            "race_number", "entry_course", "start_timing", "finish_position"
+        )) == expected
+
+    boat_one = es[0]["current_series_performance"]
+    assert [item["slot"] for item in boat_one] == [1, 3, 4]
+    assert [item["fields"]["race_number"][1] for item in boat_one] == [8, 2, 7]
+    assert [item["fields"]["finish_position"][1] for item in boat_one] == [4, 5, 5]
+    assert all(
+        item["fields"]["race_number"][1] != item["fields"]["finish_position"][1]
+        for item in boat_one
+    )
+
+    observed_at = "2026-10-10T22:22:41+09:00"
+    doc = b.build_evidence(es, "20261011", "02", 1, b.race_url("20261011", "02", 1), observed_at)
+    assert b.validate_evidence(doc) == []
+    race = next(o for o in doc["observations"] if
+                o["boat"] == 1 and o["field"] == "x-boatrace:current_series_race_number_1")
+    finish = next(o for o in doc["observations"] if
+                  o["boat"] == 1 and o["field"] == "x-boatrace:current_series_finish_position_1")
+    assert (race["value"], race["raw_value"]) == (8, "8")
+    assert (finish["value"], finish["raw_value"]) == (4, "４")
+    assert race["source_url"] == finish["source_url"]
+    assert race["observed_at"] == finish["observed_at"] == observed_at
+
+
+def test_official_current_series_missing_and_irregular_values_are_not_invented():
+    html = OFFICIAL_HTML.replace(
+        '<td class=" ">2</td>', '<td class=" ">&nbsp;</td>', 1
+    ).replace(">４</a></td>", ">転</a></td>", 1)
+    es = b.parse_racelist(html)
+    first = es[0]["current_series_performance"][0]["fields"]
+    assert first["entry_course"] == (None, None)
+    assert first["finish_position"] == ("転", None)
+
+    doc = b.build_evidence(es, "20261011", "02", 1, b.race_url("20261011", "02", 1),
+                           "2026-10-10T22:22:41+09:00")
+    assert b.validate_evidence(doc) == []
+    assert {"field": "x-boatrace:current_series_entry_course_1", "boat": 1,
+            "reason": "blank"} in doc["missing_data"]
+    assert {"field": "x-boatrace:current_series_finish_position_1", "boat": 1,
+            "reason": "unparseable raw value '転'"} in doc["missing_data"]

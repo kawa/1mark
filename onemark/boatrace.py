@@ -66,25 +66,23 @@ def fetch(url, retries=2, interval=3.0, timeout=20, opener=urllib.request.urlope
 
 
 class _Table(HTMLParser):
-    """Collects, per <tbody class~=is-fs12>, the cells of its first row as lists of text lines."""
+    """Collects table rows and cells from each <tbody class~=is-fs12>."""
 
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.bodies = []
         self._body = None
-        self._rows = 0
+        self._row = None
         self._cell = None
-        self._in_first_row = False
 
     def handle_starttag(self, tag, attrs):
         cls = dict(attrs).get("class") or ""
         if tag == "tbody" and "is-fs12" in cls.split():
             self._body = []
-            self._rows = 0
         elif self._body is not None and tag == "tr":
-            self._rows += 1
-            self._in_first_row = self._rows == 1
-        elif self._body is not None and self._in_first_row and tag == "td":
+            self._row = []
+            self._body.append(self._row)
+        elif self._row is not None and tag == "td":
             self._cell = [""]
         elif self._cell is not None and tag in ("br", "div", "p"):
             self._cell.append("")
@@ -92,10 +90,10 @@ class _Table(HTMLParser):
     def handle_endtag(self, tag):
         if tag == "td" and self._cell is not None:
             lines = [re.sub(r"\s+", " ", s).strip() for s in self._cell]
-            self._body.append([s for s in lines if s])
+            self._row.append([s for s in lines if s])
             self._cell = None
         elif tag == "tr":
-            self._in_first_row = False
+            self._row = None
         elif tag == "tbody" and self._body is not None:
             self.bodies.append(self._body)
             self._body = None
@@ -120,6 +118,11 @@ def _line(cell, i):
     return cell[i] if i < len(cell) else None
 
 
+def _cell_value(cell):
+    value = " ".join(cell).strip()
+    return value or None
+
+
 def _flc(cell):
     f = re.fullmatch(r"F(\d+)", _line(cell, 0) or "")
     l = re.fullmatch(r"L(\d+)", _line(cell, 1) or "")
@@ -127,7 +130,7 @@ def _flc(cell):
 
 
 def parse_racelist(html):
-    """Return six entries: {boat, fields: {name: (raw|None, normalized|None)}}. Raises ParseError."""
+    """Return six entries with normalized fields and aligned current-series performance. Raises ParseError."""
     p = _Table()
     try:
         p.feed(html)
@@ -138,6 +141,10 @@ def parse_racelist(html):
         raise ParseError(f"expected 6 entry rows (tbody.is-fs12), found {len(p.bodies)}")
     entries = []
     for idx, cells in enumerate(p.bodies, 1):
+        if len(cells) != 4:
+            raise ParseError(f"entry {idx}: expected 4 rows, found {len(cells)}")
+        rows = cells
+        cells = rows[0]
         if len(cells) < 8:
             raise ParseError(f"entry {idx}: expected >=8 cells, found {len(cells)}")
         boat_raw = _line(cells[0], 0)
@@ -167,9 +174,27 @@ def parse_racelist(html):
             for i, suffix in ((1, "top2_rate"), (2, "top3_rate")):
                 raw = _line(cell, i)
                 f[f"{prefix}_{suffix}"] = (raw, _num(raw))
-        recent = [s for c in cells[8:] for s in c]
-        f["recent_results"] = (" ".join(recent) if recent else None, " ".join(recent) if recent else None)
-        entries.append({"boat": idx, "fields": f})
+        performance = []
+        if len(cells) > 9 and not _line(cells[8], 0):
+            performance_rows = [cells[9:]] + rows[1:]
+            slot_count = max(len(row) for row in rows[1:])
+            for slot in range(slot_count):
+                raw_values = [
+                    _cell_value(row[slot]) if slot < len(row) else None
+                    for row in performance_rows
+                ]
+                if not any(raw_values):
+                    continue
+                values = {}
+                for name, raw, cast in zip(
+                    ("race_number", "entry_course", "start_timing", "finish_position"),
+                    raw_values,
+                    (int, int, float, int),
+                ):
+                    normalized = _num(unicodedata.normalize("NFKC", raw), cast) if raw else None
+                    values[name] = (raw, normalized)
+                performance.append({"slot": slot + 1, "fields": values})
+        entries.append({"boat": idx, "fields": f, "current_series_performance": performance})
     return entries
 
 
@@ -181,15 +206,23 @@ def build_evidence(entries, date, jcd, rno, url, observed_at=None):
     observed_at = observed_at or datetime.now(JST).isoformat(timespec="seconds")
     race_id = f"{date}-{jcd}-{int(rno):02d}"
     obs, missing = [], []
+
+    def add_observation(field, boat, raw, value):
+        if value is None:
+            missing.append({"field": field, "boat": boat,
+                            "reason": "blank" if raw is None else f"unparseable raw value {raw!r}"})
+            return
+        obs.append({"id": f"o{len(obs) + 1}", "field": field, "boat": boat, "value": value,
+                    "raw_value": raw, "source_url": url, "observed_at": observed_at, "phase": "pre_race"})
+
     for e in entries:
         for name, (raw, value) in e["fields"].items():
             field = name if name in _STANDARD else NS + name
-            if value is None:
-                missing.append({"field": field, "boat": e["boat"],
-                                "reason": "blank" if raw is None else f"unparseable raw value {raw!r}"})
-                continue
-            obs.append({"id": f"o{len(obs) + 1}", "field": field, "boat": e["boat"], "value": value,
-                        "raw_value": raw, "source_url": url, "observed_at": observed_at, "phase": "pre_race"})
+            add_observation(field, e["boat"], raw, value)
+        for result in e.get("current_series_performance", []):
+            for name, (raw, value) in result["fields"].items():
+                field = NS + f"current_series_{name}_{result['slot']}"
+                add_observation(field, e["boat"], raw, value)
     return {"schema_version": SCHEMA_VERSION, "vocabulary_version": VOCABULARY_VERSION,
             "evidence_id": f"BR-RACELIST-{race_id}", "race_id": race_id, "synthetic": False,
             "observations": obs, "inferences": [], "missing_data": missing}
