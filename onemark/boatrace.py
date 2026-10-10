@@ -130,7 +130,7 @@ def _flc(cell):
 
 
 def parse_racelist(html):
-    """Return six entries: {boat, fields: {name: (raw|None, normalized|None)}}. Raises ParseError."""
+    """Return six entries with normalized fields and aligned current-series performance. Raises ParseError."""
     p = _Table()
     try:
         p.feed(html)
@@ -177,7 +177,7 @@ def parse_racelist(html):
         performance = []
         if len(cells) > 9 and not _line(cells[8], 0):
             performance_rows = [cells[9:]] + rows[1:]
-            slot_count = max(len(row) for row in performance_rows)
+            slot_count = max(len(row) for row in rows[1:])
             for slot in range(slot_count):
                 raw_values = [
                     _cell_value(row[slot]) if slot < len(row) else None

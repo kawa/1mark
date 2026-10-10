@@ -101,6 +101,7 @@ def test_official_current_series_rows_stay_aligned_for_all_boats():
         ("4", "1", ".25", "２"),
     ]
     assert len(es) == 6
+    assert [len(entry["current_series_performance"]) for entry in es] == [3, 3, 3, 3, 3, 3]
     for entry, expected in zip(es, expected_first_races):
         first = entry["current_series_performance"][0]
         assert first["slot"] == 1
