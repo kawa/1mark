@@ -1,0 +1,150 @@
+{
+  "schema_version": "1.0.0",
+  "batch_id": "SYN-BATCH-1",
+  "generated_at": "2000-01-01T09:00:00+09:00",
+  "races": [
+    {
+      "race_id": "20000101-01-01",
+      "processing": "PROCESSED",
+      "status": "PRE",
+      "prediction_id": "SYN-PRED-V11-PRE",
+      "prediction_sha256": "7d47c566128186cc519bb9d76b576cc70f25eca145d6d274fdc9a9a5f597d67b",
+      "bets": [
+        {
+          "bet_type": "trifecta",
+          "combination": [
+            1,
+            2,
+            4
+          ],
+          "units": 3
+        }
+      ],
+      "total_units": 3,
+      "exhibition_time": {
+        "kind": "estimated_from_betting_deadline",
+        "time": "2000-01-01T10:50:00+09:00",
+        "betting_deadline": "2000-01-01T11:00:00+09:00",
+        "offset_minutes": 10,
+        "source": "estimate: betting deadline minus offset"
+      }
+    },
+    {
+      "race_id": "20000101-01-02",
+      "processing": "PROCESSED",
+      "status": "SKIP",
+      "prediction_id": "SYN-SKIP-2",
+      "prediction_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "exhibition_time": {
+        "kind": "official",
+        "time": "2000-01-01T11:20:00+09:00",
+        "source": "official schedule"
+      },
+      "data_limitations": [
+        "SYNTHETIC: no motor data"
+      ]
+    },
+    {
+      "race_id": "20000101-01-03",
+      "processing": "FAILED",
+      "failure": {
+        "stage": "parse",
+        "error": "SYNTHETIC parse error"
+      },
+      "exhibition_time": {
+        "kind": "unknown"
+      }
+    },
+    {
+      "race_id": "20000101-01-04",
+      "processing": "PROCESSED",
+      "status": "SKIP",
+      "prediction_id": "SYN-SKIP-4",
+      "prediction_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "exhibition_time": {
+        "kind": "unknown"
+      }
+    },
+    {
+      "race_id": "20000101-01-05",
+      "processing": "PROCESSED",
+      "status": "SKIP",
+      "prediction_id": "SYN-SKIP-5",
+      "prediction_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "exhibition_time": {
+        "kind": "unknown"
+      }
+    },
+    {
+      "race_id": "20000101-01-06",
+      "processing": "PROCESSED",
+      "status": "SKIP",
+      "prediction_id": "SYN-SKIP-6",
+      "prediction_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "exhibition_time": {
+        "kind": "unknown"
+      }
+    },
+    {
+      "race_id": "20000101-01-07",
+      "processing": "PROCESSED",
+      "status": "SKIP",
+      "prediction_id": "SYN-SKIP-7",
+      "prediction_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "exhibition_time": {
+        "kind": "unknown"
+      }
+    },
+    {
+      "race_id": "20000101-01-08",
+      "processing": "PROCESSED",
+      "status": "SKIP",
+      "prediction_id": "SYN-SKIP-8",
+      "prediction_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "exhibition_time": {
+        "kind": "unknown"
+      }
+    },
+    {
+      "race_id": "20000101-01-09",
+      "processing": "PROCESSED",
+      "status": "SKIP",
+      "prediction_id": "SYN-SKIP-9",
+      "prediction_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "exhibition_time": {
+        "kind": "unknown"
+      }
+    },
+    {
+      "race_id": "20000101-01-10",
+      "processing": "PROCESSED",
+      "status": "SKIP",
+      "prediction_id": "SYN-SKIP-10",
+      "prediction_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "exhibition_time": {
+        "kind": "unknown"
+      }
+    },
+    {
+      "race_id": "20000101-01-11",
+      "processing": "PROCESSED",
+      "status": "SKIP",
+      "prediction_id": "SYN-SKIP-11",
+      "prediction_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "exhibition_time": {
+        "kind": "unknown"
+      }
+    },
+    {
+      "race_id": "20000101-01-12",
+      "processing": "PROCESSED",
+      "status": "SKIP",
+      "prediction_id": "SYN-SKIP-12",
+      "prediction_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "exhibition_time": {
+        "kind": "unknown"
+      }
+    }
+  ],
+  "synthetic": true
+}

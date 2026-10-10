@@ -9,3 +9,6 @@ You have no memory of earlier sessions. Everything needed is in the repository a
 5. Validate: `python -m onemark.validate <files>` (use `lifecycle_*` fixtures for full cross-document checks) (config in `config/`) and `pytest`.
 6. Put learning in `knowledge/proposals/` as proposals. Never edit `knowledge/validated/` or `protocols/`.
 7. Open a PR; never merge. No scraping or AI API calls exist yet.
+
+## Batch PRE / user-controlled WAIT workflow
+For a batch ZIP (`python -m onemark.workflow <batch-dir>`), follow its `START_HERE.md`: complete PRE/SKIP for all 12 races first (unprocessed races are reported as failures, never SKIP), the user selects WAIT items (tracked in a `workflow_state`, never in the prediction), and exhibition results produce an `exhibition_revision` referencing the baseline prediction id and sha256.
