@@ -38,7 +38,8 @@
           "value",
           "source_url",
           "observed_at",
-          "phase"
+          "phase",
+          "raw_value"
         ],
         "properties": {
           "id": {
@@ -55,7 +56,8 @@
               "string",
               "number",
               "boolean"
-            ]
+            ],
+            "description": "Normalized value"
           },
           "source_url": {
             "type": "string",
@@ -70,6 +72,10 @@
               "pre_race",
               "post_race"
             ]
+          },
+          "raw_value": {
+            "type": "string",
+            "description": "Value exactly as published by the source; never rewritten"
           }
         }
       }

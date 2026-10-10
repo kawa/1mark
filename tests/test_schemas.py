@@ -83,7 +83,7 @@ def test_wait_requires_baseline_and_plan():
     assert not ok("prediction", bad("prediction_wait", lambda d: d.update(wait_plan=[])))
 
 
-@pytest.mark.parametrize("key", ["observation", "decision_threshold", "expected_change"])
+@pytest.mark.parametrize("key", ["step_id", "observation", "decision_threshold", "expected_operations"])
 def test_wait_plan_items_complete(key):
     assert not ok("prediction", bad("prediction_wait", lambda d: d["wait_plan"][0].pop(key)))
 
@@ -258,8 +258,41 @@ def test_decision_timing_and_leakage():
     assert decision_errors(evidence=late)
 
 
-def test_wait_plan_may_change_units():
-    assert load("prediction_wait")["wait_plan"][0]["expected_change"]["change_units"]
+def test_plan_and_decision_share_operation_vocabulary():
+    plan_ops = load("prediction_wait")["wait_plan"][0]["expected_operations"]
+    changes = load("decision_bet")["changes"]
+    assert {o["action"] for o in plan_ops} == {c["action"] for c in changes} == {"add", "remove", "change_units"}
+    assert not ok("prediction", bad("prediction_wait", lambda d: d["wait_plan"][0]["expected_operations"][0].update(action="rename")))
+    assert not ok("prediction", bad("prediction_wait", lambda d: d["wait_plan"][0]["expected_operations"][2].update(units=3)))
+    assert not ok("prediction", bad("prediction_wait", lambda d: d["wait_plan"][0]["expected_operations"][0].pop("units")))
+    assert not ok("prediction", bad("prediction_wait", lambda d: d["wait_plan"][0].update(expected_operations=[])))
+
+
+def test_plan_and_executed_changes_are_separate_records():
+    wait, dec = load("prediction_wait"), load("decision_bet")
+    assert "changes" not in wait and "wait_plan" not in dec
+    assert not ok("decision", bad("decision_bet", lambda d: d["changes"][0].pop("plan_step_ids")))
+    assert decision_errors(bad("decision_bet", lambda d: d["changes"][0].update(plan_step_ids=["step-9"])))
+    assert decision_errors(bad("decision_bet", lambda d: d["changes"][0].update(plan_step_ids=[]))) == []  # unplanned is explicit
+    assert v.prediction_errors(bad("prediction_wait", lambda d: d["wait_plan"].append(copy.deepcopy(d["wait_plan"][0]))))
+    assert v.prediction_errors(bad("prediction_wait", lambda d: d["wait_plan"][0]["expected_operations"][0].update(combination=[1, 2, 4])))
+
+
+# --- unresolved WAIT
+def test_unresolved_wait_is_incomplete_not_skip():
+    inc = load("decision_incomplete")
+    assert ok("decision", inc) and decision_errors(inc) == []
+    assert "evidence_id" not in inc and not inc["changes"]
+    assert not ok("decision", bad("decision_incomplete", lambda d: d.pop("missing")))
+    assert not ok("decision", bad("decision_incomplete", lambda d: d.update(final_bets=load("decision_bet")["final_bets"])))
+    assert not ok("decision", bad("decision_incomplete", lambda d: d.update(changes=load("decision_bet")["changes"])))
+    assert decision_errors(bad("decision_incomplete", lambda d: d.update(locked_at="2000-01-01T14:00:00+09:00")))  # before cutoff
+
+
+def test_incomplete_decision_allows_no_betting():
+    dec = load("decision_incomplete")
+    risk = bad("risk_decision", lambda d: d.update(subject_type="decision", subject_id=dec["decision_id"], subject_sha256=v.canonical_sha256(dec), total_stake_jpy=100))
+    assert v.risk_errors(risk, dec)
 
 
 # --- results, payouts, settlement
@@ -278,21 +311,9 @@ def test_review_computed_from_locked_prediction_and_settled_separately():
 def test_settlement_uses_official_payouts():
     assert review_errors(bad("review", lambda d: d["settlement"].update(profit_jpy=0)))
     assert review_errors(bad("review", lambda d: d["settlement"]["lines"][1].update(returned_jpy=380)))
-    assert review_errors(bad("review", lambda d: d["result"]["payouts"].pop(1)))  # hit but no payout
+    assert review_errors(bad("review", lambda d: d["result"]["payouts"].pop(1)))  # hit, confirmed, but no payout
     assert not ok("review", bad("review", lambda d: d["result"]["payouts"][0].pop("payout_per_100_jpy")))
     assert not ok("review", bad("review", lambda d: d["result"].pop("payouts")))
-
-
-def test_refund_payout_returns_stake():
-    def refund(d):
-        d["result"]["payouts"].append({"bet_type": "trifecta", "combination": [1, 2, 4], "kind": "refund"})
-        line = d["settlement"]["lines"][0]
-        line.update(status="refund", returned_jpy=300)
-        d["settlement"].update(total_returned_jpy=1060, profit_jpy=560)
-
-    doc = bad("review", refund)
-    assert ok("review", doc) and review_errors(doc) == []
-    assert not ok("review", bad("review", lambda d: d["result"]["payouts"].append({"bet_type": "trio", "combination": [1, 2, 4], "kind": "refund", "payout_per_100_jpy": 100})))
 
 
 def test_settlement_requires_matching_approved_risk_decision():
@@ -300,25 +321,165 @@ def test_settlement_requires_matching_approved_risk_decision():
     assert v.review_errors(load("review"), load("prediction_pre"), risk=load("risk_decision_rejected"))
 
 
-def test_review_of_wait_decision_uses_final_bets():
-    pre_like_wait, dec = load("prediction_wait"), load("decision_bet")
-    risk = bad("risk_decision", lambda d: d.update(subject_type="decision", subject_id=dec["decision_id"], subject_sha256=v.canonical_sha256(dec), total_stake_jpy=300))
-    order = [4, 1, 2]
-    rev = bad("review", lambda d: d.update(
-        prediction_id=pre_like_wait["prediction_id"], prediction_sha256=v.canonical_sha256(pre_like_wait),
-        decision_id=dec["decision_id"], decision_sha256=v.canonical_sha256(dec)))
-    rev["result"].update(finish_order=order, payouts=[
-        {"bet_type": "trifecta", "combination": [4, 1, 2], "kind": "win", "payout_per_100_jpy": 2500},
-        {"bet_type": "trio", "combination": [1, 2, 4], "kind": "win", "payout_per_100_jpy": 380}])
-    rev["outcome"]["bet_results"] = [{"bet_type": b["bet_type"], "combination": b["combination"], "hit": True} for b in dec["final_bets"]]
-    rev["settlement"] = {"risk_decision_id": risk["risk_decision_id"], "risk_decision_sha256": v.canonical_sha256(risk),
-        "lines": [{"bet_type": "trio", "combination": [1, 2, 4], "units": 1, "stake_jpy": 100, "status": "win", "returned_jpy": 380},
-                  {"bet_type": "trifecta", "combination": [4, 1, 2], "units": 2, "stake_jpy": 200, "status": "win", "returned_jpy": 5000}],
-        "total_stake_jpy": 300, "total_returned_jpy": 5380, "profit_jpy": 5080}
-    assert ok("review", rev)
-    assert v.review_errors(rev, pre_like_wait, dec, risk) == []
-    assert v.review_errors(rev, pre_like_wait, None, risk)
-    assert not ok("review", bad("review", lambda d: d.update(decision_id="SYN-DEC-BET")))
+# --- refunds
+def refunded(*combos, **extra):
+    return {"status": "confirmed", "race_wide": False, "source_url": "https://example.invalid/r",
+            "refunded": [{"bet_type": t, "combination": c} for t, c in combos], **extra}
+
+
+def settle_for(refund_info, payouts=None):
+    pre, review = load("prediction_pre"), load("review")
+    review["result"]["refund_info"] = refund_info
+    if payouts is not None:
+        review["result"]["payouts"] = payouts
+    return v.settle(pre, review["result"], v.load_units_config())
+
+
+WIN = {"bet_type": "trio", "combination": [1, 2, 4], "payout_per_100_jpy": 380}
+
+
+def test_partial_refund_returns_only_refunded_stake():
+    lines, reasons, errors = settle_for(refunded(("trifecta", [1, 2, 4])), [WIN])
+    assert (reasons, errors) == ([], [])
+    assert [(x["status"], x["returned_jpy"]) for x in lines] == [("refund", 300), ("win", 760)]
+
+
+def test_race_wide_refund_returns_all_stakes():
+    lines, reasons, errors = settle_for(refunded(race_wide=True), [])
+    assert (reasons, errors) == ([], [])
+    assert [(x["status"], x["returned_jpy"]) for x in lines] == [("refund", 300), ("refund", 200)]
+
+
+def test_multiple_refunded_combinations():
+    lines, *_ = settle_for(refunded(("trifecta", [1, 2, 4]), ("trio", [1, 2, 4])), [])
+    assert all(x["status"] == "refund" for x in lines)
+
+
+def test_confirmed_non_refund_makes_miss():
+    lines, reasons, _ = settle_for(refunded(), [WIN])
+    assert lines[0]["status"] == "miss" and reasons == []
+
+
+@pytest.mark.parametrize("status", ["unavailable", "incomplete"])
+def test_unknown_refund_status_is_never_a_loss(status):
+    info = {"status": status, "race_wide": False, "refunded": []}
+    lines, reasons, errors = settle_for(info, [WIN])
+    assert errors == [] and reasons
+    assert lines[0]["status"] == "unresolved" and "returned_jpy" not in lines[0]
+    assert lines[1]["status"] == "win"  # an official payout is certain
+
+
+def test_incomplete_refund_info_keeps_known_refunds():
+    info = {"status": "incomplete", "race_wide": False, "refunded": [{"bet_type": "trifecta", "combination": [1, 2, 4]}]}
+    lines, reasons, _ = settle_for(info, [WIN])
+    assert lines[0]["status"] == "refund" and reasons == []
+
+
+def test_refund_info_schema_rules():
+    base = load("review")
+    assert not ok("review", bad("review", lambda d: d["result"].update(refund_info={"status": "unavailable", "race_wide": True, "refunded": []})))
+    assert not ok("review", bad("review", lambda d: d["result"].update(refund_info={"status": "unavailable", "race_wide": False, "refunded": [{"bet_type": "trio", "combination": [1, 2, 4]}]})))
+    assert not ok("review", bad("review", lambda d: d["result"]["refund_info"].pop("source_url")))
+    assert not ok("review", bad("review", lambda d: d["result"].pop("refund_info")))
+    assert not ok("review", bad("review", lambda d: d["result"]["refund_info"].update(affected_boats=[7])))
+    assert base["result"]["refund_info"]["status"] == "confirmed"
+
+
+def test_settlement_unresolved_when_refund_unknown():
+    rev = load("review")
+    rev["result"]["refund_info"] = {"status": "unavailable", "race_wide": False, "refunded": []}
+    # claiming a resolved result with the miss counted is rejected
+    assert v.review_errors(rev, load("prediction_pre"), risk=load("risk_decision"))
+    doc = load("lifecycle_pre_refund_unavailable_unresolved")
+    assert doc["review"]["settlement"]["status"] == "unresolved"
+    assert "profit_jpy" not in doc["review"]["settlement"]
+    assert v.validate_lifecycle(doc) == []
+    resolved = copy.deepcopy(doc)
+    resolved["review"]["settlement"].update(status="resolved", total_returned_jpy=760, profit_jpy=260)
+    del resolved["review"]["settlement"]["unresolved_reason"]
+    resolved["review"]["settlement"]["lines"][0].update(status="miss", returned_jpy=0)
+    assert v.validate_lifecycle(resolved)
+
+
+def test_refund_conflicting_with_payout_rejected():
+    refund_and_win = copy.deepcopy(load("review"))
+    refund_and_win["result"]["refund_info"] = refunded(("trio", [1, 2, 4]))
+    assert v.result_errors(refund_and_win["result"])
+
+
+# --- single lifecycle entry point
+LIFECYCLES = sorted(EX.glob("lifecycle_*.json"), key=lambda p: p.name)
+
+
+def life(name):
+    return load(name)
+
+
+def test_lifecycle_fixtures_cover_every_path():
+    names = {p.name.split(".")[0] for p in LIFECYCLES}
+    assert names >= {"lifecycle_pre_win_settled", "lifecycle_wait_bet_partial_refund", "lifecycle_wait_skip",
+                     "lifecycle_wait_incomplete", "lifecycle_pre_race_wide_refund",
+                     "lifecycle_pre_refund_unavailable_unresolved", "lifecycle_skip"}
+
+
+@pytest.mark.parametrize("path", LIFECYCLES, ids=lambda p: p.name)
+def test_lifecycle_fixtures_pass_single_entry_point(path):
+    assert v.validate_lifecycle(json.loads(path.read_text())) == []
+    assert v.validate_file(path) == []
+
+
+def mutated(name, mutate):
+    doc = copy.deepcopy(life(name))
+    mutate(doc)
+    return v.validate_lifecycle(doc)
+
+
+def test_lifecycle_runs_schema_validation_on_every_record():
+    for key in ("task", "prediction", "decision", "risk_decision", "review"):
+        name = "lifecycle_wait_bet_partial_refund"
+        assert mutated(name, lambda d: d[key].update(schema_version="9")), key
+    assert mutated("lifecycle_pre_win_settled", lambda d: d["learning_proposals"][0].update(status="validated"))
+    assert mutated("lifecycle_pre_win_settled", lambda d: d["evidence"][0]["observations"][0].pop("source_url"))
+
+
+def test_lifecycle_runs_cross_document_checks():
+    n = "lifecycle_wait_bet_partial_refund"
+    assert mutated(n, lambda d: d["prediction"]["bets"][0].update(units=9))  # baseline changed after reference
+    assert mutated(n, lambda d: d.pop("decision"))
+    assert mutated(n, lambda d: d["decision"]["final_bets"].pop())
+    assert mutated(n, lambda d: d["decision"].update(locked_at="2000-01-01T14:55:00+09:00"))
+    assert mutated(n, lambda d: d["evidence"][1]["observations"][0].update(phase="post_race"))
+    assert mutated(n, lambda d: d["risk_decision"].update(total_stake_jpy=200))
+    assert mutated(n, lambda d: d["review"]["settlement"]["lines"][1].update(returned_jpy=1))
+    assert mutated(n, lambda d: d["review"].update(decision_sha256="0" * 64))
+    assert mutated(n, lambda d: d["task"].update(race_id="20000101-01-02"))
+    assert mutated(n, lambda d: d["review"]["result"]["refund_info"].update(refunded=[]))  # partial refund erased
+    assert mutated(n, lambda d: d.pop("risk_decision"))
+    assert mutated(n, lambda d: d["task"].update(synthetic=False))
+    assert mutated("lifecycle_pre_win_settled", lambda d: d["learning_proposals"][0]["evidence"][0].update(review_id="SYN-REV-X"))
+    assert mutated("lifecycle_pre_win_settled", lambda d: d["review"].update(learning_proposal_ids=[]))
+    assert mutated("lifecycle_pre_win_settled", lambda d: d.update(decision=life("lifecycle_wait_skip")["decision"]))
+    assert mutated("lifecycle_skip", lambda d: d.update(risk_decision=life("lifecycle_pre_win_settled")["risk_decision"]))
+
+
+def test_lifecycle_wait_without_decision_is_not_valid():
+    assert any("INCOMPLETE" in e for e in mutated("lifecycle_wait_incomplete", lambda d: d.pop("decision")))
+
+
+def test_lifecycle_wait_incomplete_has_no_betting():
+    doc = life("lifecycle_wait_incomplete")
+    assert "risk_decision" not in doc and "review" not in doc
+    assert mutated("lifecycle_wait_incomplete", lambda d: d.update(risk_decision=life("lifecycle_pre_win_settled")["risk_decision"]))
+
+
+def test_main_entry_point_cli(tmp_path, capsys):
+    assert v.main([str(p) for p in LIFECYCLES]) == 0
+    bad_doc = life("lifecycle_pre_win_settled")
+    bad_doc["risk_decision"]["total_stake_jpy"] = 100
+    path = tmp_path / "lifecycle_bad.json"
+    path.write_text(json.dumps(bad_doc))
+    assert v.main([str(path)]) == 1
+    assert "total_stake_jpy" in capsys.readouterr().out
 
 
 # --- evidence vocabulary
@@ -327,23 +488,35 @@ def test_review_of_wait_decision_uses_final_bets():
     ("motor_top2_rate", 4, 40.0), ("motor_top3_rate", 5, 60.0),
     ("wind_direction", None, "SW"), ("wind_speed_mps", None, 3), ("wave_height_cm", None, 5),
     ("x-acme:custom_metric", None, "anything"),
+    # provisional ranges never reject a valid observation
+    ("entry_course", 1, 7), ("exhibition_time", 1, 60), ("wind_speed_mps", None, -1), ("wind_direction", None, "UP"),
 ])
 def test_standard_and_extension_fields_accepted(field, boat, value):
     assert v.field_errors(field, boat, value, True) == []
 
 
 @pytest.mark.parametrize("field,boat,value", [
-    ("entry_course", 1, 7), ("entry_course", None, 1), ("exhibition_time", 1, "6.8"), ("exhibition_time", 1, 60),
-    ("exhibition_st", 1, True), ("wind_direction", None, "UP"), ("wind_speed_mps", 1, 3), ("wind_speed_mps", None, -1),
-    ("wave_height_cm", None, "high"), ("windspeed", None, 3), ("acme:metric", None, 1), ("x-acme:", None, 1),
+    ("entry_course", None, 1), ("exhibition_time", 1, "6.8"), ("exhibition_st", 1, True),
+    ("wind_speed_mps", 1, 3), ("wave_height_cm", None, "high"), ("windspeed", None, 3),
+    ("acme:metric", None, 1), ("x-acme:", None, 1),
 ])
 def test_bad_fields_rejected(field, boat, value):
     assert v.field_errors(field, boat, value, True)
 
 
+def test_provisional_constraints_only_warn_and_raw_value_is_kept():
+    assert v.load_vocabulary()["status"] == "provisional"
+    assert v.field_warnings("wind_direction", "UP") and v.field_warnings("wind_speed_mps", -1)
+    assert v.field_warnings("wind_speed_mps", 3) == [] and v.field_warnings("x-a:b", 1) == []
+    odd = bad("evidence", lambda d: d["observations"][2].update(value=-3, raw_value="-3"))
+    assert ok("evidence", odd) and v.evidence_warnings(odd)
+    assert not ok("evidence", bad("evidence", lambda d: d["observations"][0].pop("raw_value")))
+    assert bad("evidence", lambda d: d["observations"][2].update(raw_value="2.0 m/s"))["observations"][2]["raw_value"] == "2.0 m/s"
+
+
 def test_evidence_uses_vocabulary():
     assert v.evidence_errors(bad("evidence", lambda d: d["observations"][2].update(field="windspeed")))
-    assert v.evidence_errors(bad("evidence", lambda d: d["observations"][2].update(value=-3)))
+    assert v.evidence_errors(bad("evidence", lambda d: d["observations"][2].update(value="fast")))
     assert v.evidence_errors(bad("evidence_exhibition", lambda d: d["observations"][0].pop("boat")))
     assert not ok("evidence", bad("evidence", lambda d: d["observations"][2].update(field="Wind Speed")))
     assert not ok("prediction", bad("prediction_wait", lambda d: d["wait_plan"][0]["observation"].update(field="exhibition time")))

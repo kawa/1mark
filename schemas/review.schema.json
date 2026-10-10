@@ -43,9 +43,10 @@
       "additionalProperties": false,
       "required": [
         "finish_order",
+        "payouts",
+        "refund_info",
         "source_url",
-        "confirmed_at",
-        "payouts"
+        "confirmed_at"
       ],
       "properties": {
         "finish_order": {
@@ -61,14 +62,14 @@
         },
         "payouts": {
           "type": "array",
-          "description": "Official payouts by bet type and combination, including refunds",
+          "description": "Official win payouts by bet type and combination",
           "items": {
             "type": "object",
             "additionalProperties": false,
             "required": [
               "bet_type",
               "combination",
-              "kind"
+              "payout_per_100_jpy"
             ],
             "properties": {
               "bet_type": {
@@ -77,50 +78,15 @@
               "combination": {
                 "$ref": "_defs.schema.json#/$defs/combination"
               },
-              "kind": {
-                "enum": [
-                  "win",
-                  "refund"
-                ]
-              },
               "payout_per_100_jpy": {
                 "type": "integer",
                 "minimum": 100
               }
-            },
-            "allOf": [
-              {
-                "if": {
-                  "properties": {
-                    "kind": {
-                      "const": "win"
-                    }
-                  }
-                },
-                "then": {
-                  "required": [
-                    "payout_per_100_jpy"
-                  ]
-                }
-              },
-              {
-                "if": {
-                  "properties": {
-                    "kind": {
-                      "const": "refund"
-                    }
-                  }
-                },
-                "then": {
-                  "not": {
-                    "required": [
-                      "payout_per_100_jpy"
-                    ]
-                  }
-                }
-              }
-            ]
+            }
           }
+        },
+        "refund_info": {
+          "$ref": "_defs.schema.json#/$defs/refund_info"
         }
       }
     },
@@ -264,12 +230,10 @@
       "additionalProperties": false,
       "description": "Financial settlement, kept separate from outcome (hit detection)",
       "required": [
+        "status",
         "risk_decision_id",
         "risk_decision_sha256",
-        "lines",
-        "total_stake_jpy",
-        "total_returned_jpy",
-        "profit_jpy"
+        "lines"
       ],
       "properties": {
         "risk_decision_id": {
@@ -288,8 +252,7 @@
               "combination",
               "units",
               "stake_jpy",
-              "status",
-              "returned_jpy"
+              "status"
             ],
             "properties": {
               "bet_type": {
@@ -308,14 +271,38 @@
                 "enum": [
                   "win",
                   "miss",
-                  "refund"
+                  "refund",
+                  "unresolved"
                 ]
               },
               "returned_jpy": {
                 "type": "integer",
                 "minimum": 0
               }
-            }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "status": {
+                      "const": "unresolved"
+                    }
+                  }
+                },
+                "then": {
+                  "not": {
+                    "required": [
+                      "returned_jpy"
+                    ]
+                  }
+                },
+                "else": {
+                  "required": [
+                    "returned_jpy"
+                  ]
+                }
+              }
+            ]
           }
         },
         "total_stake_jpy": {
@@ -328,8 +315,68 @@
         },
         "profit_jpy": {
           "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "resolved",
+            "unresolved"
+          ]
+        },
+        "unresolved_reason": {
+          "$ref": "_defs.schema.json#/$defs/text"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "resolved"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "total_stake_jpy",
+              "total_returned_jpy",
+              "profit_jpy"
+            ],
+            "not": {
+              "required": [
+                "unresolved_reason"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unresolved"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "unresolved_reason"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "total_returned_jpy"
+                  ]
+                },
+                {
+                  "required": [
+                    "profit_jpy"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   },
   "allOf": [

@@ -5,7 +5,7 @@
   "task_id": "SYN-TASK-1",
   "race_id": "20000101-01-01",
   "baseline_prediction_id": "SYN-PRED-WAIT",
-  "baseline_sha256": "556a31a11f323c1763014d80187349828dafbaa332fc2283d171c9915320e22a",
+  "baseline_sha256": "1306ed0fafdb071f1674c37daa7ec2c2586954e5da3232e7672c6617816d8d70",
   "evidence_id": "SYN-EV-2",
   "locked_at": "2000-01-01T14:40:00+09:00",
   "synthetic": true,

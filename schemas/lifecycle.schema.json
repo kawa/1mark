@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kawa/1mark/schemas/lifecycle.schema.json",
+  "title": "Self-contained lifecycle fixture: every record of one race, validated together",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "task",
+    "evidence",
+    "prediction",
+    "synthetic"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "synthetic": {
+      "type": "boolean"
+    },
+    "task": {
+      "type": "object"
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object"
+      }
+    },
+    "prediction": {
+      "type": "object"
+    },
+    "decision": {
+      "type": "object"
+    },
+    "risk_decision": {
+      "type": "object"
+    },
+    "review": {
+      "type": "object"
+    },
+    "learning_proposals": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}

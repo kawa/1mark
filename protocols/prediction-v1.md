@@ -24,11 +24,13 @@ Operational states (not predictions; no assessments or bets):
 - **INCOMPLETE**: session could not finish (`missing`).
 
 ## WAIT revision (post-exhibition decision)
-A separate `decision` record (`schemas/decision.schema.json`) references the locked baseline by id and SHA-256 and uses a post-exhibition, pre-race evidence bundle. Final is **BET** or **SKIP**.
-- `changes` is a list of `add`, `remove`, `change_units`; each cites evidence ids and a reason. An empty list keeps the baseline unchanged.
+A separate `decision` record (`schemas/decision.schema.json`) references the locked baseline by id and SHA-256 and uses a post-exhibition, pre-race evidence bundle. Final is **BET**, **SKIP** or **INCOMPLETE**.
+- The WAIT plan (`expected_operations`) and the decision (`changes`) use one operation vocabulary: `add`, `remove`, `change_units`. They remain separate records: the plan is what was conditionally expected; the changes are what was actually executed.
+- Each plan step has a `step_id`. Each executed change lists `plan_step_ids` (empty = explicitly unplanned), observed `evidence_ids` and a `reason`. An empty `changes` list keeps the baseline unchanged.
 - BET: `final_bets` must equal the baseline bets with the changes applied (validator recomputes).
 - SKIP: `skip_analysis` with reason and evidence; no changes or bets.
-- It must be locked after the baseline and no later than `prediction_cutoff`.
+- INCOMPLETE: recorded at or after `prediction_cutoff` when no valid BET/SKIP decision exists. It never becomes SKIP, carries no bets, and cannot be risk-approved.
+- BET/SKIP must be locked after the baseline and no later than `prediction_cutoff`.
 
 ## Bets, units and risk
 - Trifecta (3連単) is ordered; trio (3連複) is stored ascending. A trifecta and a trio on the same boats are distinct products and may coexist.
@@ -38,10 +40,10 @@ A separate `decision` record (`schemas/decision.schema.json`) references the loc
 ## Determinism and versions
 - Every record carries `schema_version`, and predictions carry `protocol_version` and `knowledge_version`.
 - A prediction is locked by `locked_at <= task.prediction_cutoff <= scheduled_start`. Its identity is the SHA-256 of its canonical JSON (`onemark.validate.canonical_sha256`); risk decisions and reviews cite that hash.
-- Rules a schema cannot express (ascending trios, no duplicate bets, WAIT change application, stake from config, hit calculation, settlement, evidence vocabulary and time consistency) are in `onemark/validate.py` and tested.
+- Rules a schema cannot express (ascending trios, no duplicate bets, WAIT change application, stake from config, hit calculation, settlement, evidence vocabulary and time consistency) are in `onemark/validate.py` and tested. `validate_lifecycle` is the single entry point: it schema-validates every record of a race and runs all cross-document checks (prediction, WAIT decision, risk decision, result, review, settlement, learning proposals). Run it on `examples/lifecycle_*.synthetic.json` via `python -m onemark.validate`; CI does.
 
 ## Evidence integrity
 - Observations are facts with `source_url`, `observed_at`, `phase`. Inferences are listed separately and must be based on observations.
-- Field names, types and units are standardized in `config/evidence-vocabulary-v1.json` (entry course, exhibition time/ST, motor statistics, wind direction/speed, wave height). Extensions must be namespaced `x-<ns>:<name>`. Timestamps are ISO 8601 with a UTC offset.
+- Field names, types and units are standardized in `config/evidence-vocabulary-v1.json` (entry course, exhibition time/ST, motor statistics, wind direction/speed, wave height). Ranges and the wind-direction set are **provisional** (pending verification against BOAT RACE data): they only produce warnings. Every observation keeps its `raw_value` exactly as published. Extensions must be namespaced `x-<ns>:<name>`. Timestamps are ISO 8601 with a UTC offset.
 - Unobtained data is listed in `missing_data`, never guessed.
 - Any `post_race` observation or one observed after the cutoff must not be in a pre-race bundle (validator rejects it).

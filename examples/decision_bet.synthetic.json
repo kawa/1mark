@@ -5,7 +5,7 @@
   "task_id": "SYN-TASK-1",
   "race_id": "20000101-01-01",
   "baseline_prediction_id": "SYN-PRED-WAIT",
-  "baseline_sha256": "556a31a11f323c1763014d80187349828dafbaa332fc2283d171c9915320e22a",
+  "baseline_sha256": "1306ed0fafdb071f1674c37daa7ec2c2586954e5da3232e7672c6617816d8d70",
   "evidence_id": "SYN-EV-2",
   "locked_at": "2000-01-01T14:40:00+09:00",
   "synthetic": true,
@@ -21,6 +21,9 @@
         2
       ],
       "units": 2,
+      "plan_step_ids": [
+        "step-1"
+      ],
       "evidence_ids": [
         "e1",
         "e2",
@@ -37,6 +40,9 @@
         4
       ],
       "units": 1,
+      "plan_step_ids": [
+        "step-1"
+      ],
       "evidence_ids": [
         "e1"
       ],
@@ -50,11 +56,12 @@
         2,
         4
       ],
+      "plan_step_ids": [],
       "evidence_ids": [
         "e1",
         "ei1"
       ],
-      "reason": "SYNTHETIC: boat 1 slow exhibition"
+      "reason": "SYNTHETIC: unplanned removal after slow exhibition"
     }
   ],
   "final_bets": [

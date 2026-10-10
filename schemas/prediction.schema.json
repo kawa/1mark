@@ -124,11 +124,15 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
+          "step_id",
           "observation",
           "decision_threshold",
-          "expected_change"
+          "expected_operations"
         ],
         "properties": {
+          "step_id": {
+            "$ref": "_defs.schema.json#/$defs/id"
+          },
           "observation": {
             "type": "object",
             "additionalProperties": false,
@@ -151,34 +155,11 @@
           "decision_threshold": {
             "$ref": "_defs.schema.json#/$defs/text"
           },
-          "expected_change": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "description"
-            ],
-            "properties": {
-              "description": {
-                "$ref": "_defs.schema.json#/$defs/text"
-              },
-              "add_bets": {
-                "type": "array",
-                "items": {
-                  "$ref": "_defs.schema.json#/$defs/bet"
-                }
-              },
-              "remove_bets": {
-                "type": "array",
-                "items": {
-                  "$ref": "_defs.schema.json#/$defs/bet"
-                }
-              },
-              "change_units": {
-                "type": "array",
-                "items": {
-                  "$ref": "_defs.schema.json#/$defs/bet"
-                }
-              }
+          "expected_operations": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "_defs.schema.json#/$defs/bet_operation"
             }
           }
         }

@@ -84,7 +84,7 @@ def bets_errors(bets):
 
 
 def field_errors(field, boat=None, value=None, check_value=False):
-    """Standard vocabulary names are checked; namespaced extensions (x-ns:name) are free-form."""
+    """Structure and type of standard fields. Ranges are provisional: see field_warnings."""
     vocab = load_vocabulary()
     if re.match(vocab["extension_pattern"], field):
         return []
@@ -105,21 +105,67 @@ def field_errors(field, boat=None, value=None, check_value=False):
             okay = isinstance(value, str)
         if not okay:
             errors.append(f"{field} must be {spec['type']}")
-        elif "enum" in spec and value not in spec["enum"]:
-            errors.append(f"{field} must be one of {spec['enum']}")
-        elif spec["type"] != "string" and not spec["min"] <= value <= spec["max"]:
-            errors.append(f"{field} out of range {spec['min']}..{spec['max']} {spec['unit']}")
     return errors
+
+
+def field_warnings(field, value):
+    """Provisional ranges/enums never reject an observation; they only warn."""
+    spec = load_vocabulary()["fields"].get(field)
+    if spec is None or isinstance(value, bool):
+        return []
+    if "provisional_enum" in spec and value not in spec["provisional_enum"]:
+        return [f"{field}={value!r} outside provisional set (raw value kept)"]
+    if "provisional_min" in spec and isinstance(value, (int, float)):
+        if not spec["provisional_min"] <= value <= spec["provisional_max"]:
+            return [f"{field}={value} outside provisional range {spec['provisional_min']}..{spec['provisional_max']} {spec['unit']} (raw value kept)"]
+    return []
+
+
+def operations_errors(ops):
+    errors = []
+    for op in ops:
+        errors += combination_errors(op["bet_type"], op["combination"])
+    return errors
+
+
+def _key(bet):
+    return (bet["bet_type"], tuple(bet["combination"]))
+
+
+def apply_operations(baseline_bets, ops):
+    """Apply add/remove/change_units (shared by WAIT plan and decision); returns ({key: units}, errors)."""
+    bets = {_key(b): b["units"] for b in baseline_bets}
+    errors, touched = operations_errors(ops), set()
+    for op in ops:
+        k = _key(op)
+        if k in touched:
+            errors.append(f"multiple operations on {k}")
+        touched.add(k)
+        if op["action"] == "add":
+            if k in bets:
+                errors.append(f"cannot add existing bet {k}")
+            bets[k] = op["units"]
+        elif k not in bets:
+            errors.append(f"cannot {op['action']} missing bet {k}")
+        elif op["action"] == "remove":
+            del bets[k]
+        elif op["units"] == bets[k]:
+            errors.append(f"change_units for {k} does not change units")
+        else:
+            bets[k] = op["units"]
+    return bets, errors
 
 
 def prediction_errors(pred):
     errors = bets_errors(pred.get("bets", []))
-    for step in pred.get("wait_plan", []):
-        obs = step["observation"]
+    steps = pred.get("wait_plan", [])
+    ids = [st["step_id"] for st in steps]
+    if len(ids) != len(set(ids)):
+        errors.append("duplicate wait_plan step_id")
+    for st in steps:
+        obs = st["observation"]
         errors += field_errors(obs["field"], obs.get("boat"))
-        change = step["expected_change"]
-        for key in ("add_bets", "remove_bets", "change_units"):
-            errors += bets_errors(change.get(key, []))
+        errors += [f"{st['step_id']}: {e}" for e in apply_operations(pred.get("bets", []), st["expected_operations"])[1]]
     return errors
 
 
@@ -146,6 +192,10 @@ def evidence_errors(evidence):
             if ref not in obs_ids:
                 errors.append(f"inference {inf['id']} must be based on observations, got {ref}")
     return errors
+
+
+def evidence_warnings(evidence):
+    return [f"{o['id']}: {w}" for o in evidence["observations"] for w in field_warnings(o["field"], o["value"])]
 
 
 def leak_errors(task, evidence):
@@ -178,36 +228,6 @@ def prediction_integrity_errors(task, evidence, pred):
     return errors
 
 
-def _key(bet):
-    return (bet["bet_type"], tuple(bet["combination"]))
-
-
-def apply_changes(baseline_bets, changes):
-    """Deterministically derive final bets from a locked baseline; returns (bets, errors)."""
-    bets = {_key(b): b["units"] for b in baseline_bets}
-    errors = []
-    touched = set()
-    for c in changes:
-        k = _key(c)
-        errors += combination_errors(c["bet_type"], c["combination"])
-        if k in touched:
-            errors.append(f"multiple changes to {k}")
-        touched.add(k)
-        if c["action"] == "add":
-            if k in bets:
-                errors.append(f"cannot add existing bet {k}")
-            bets[k] = c["units"]
-        elif k not in bets:
-            errors.append(f"cannot {c['action']} missing bet {k}")
-        elif c["action"] == "remove":
-            del bets[k]
-        elif c["units"] == bets[k]:
-            errors.append(f"change_units for {k} does not change units")
-        else:
-            bets[k] = c["units"]
-    return bets, errors
-
-
 def decision_errors(task, baseline, evidence, decision):
     errors = []
     if baseline["status"] != "WAIT":
@@ -216,21 +236,28 @@ def decision_errors(task, baseline, evidence, decision):
         errors.append("decision does not reference the locked baseline")
     if decision["task_id"] != task["task_id"] or decision["race_id"] != task["race_id"]:
         errors.append("decision does not match task")
-    if decision["evidence_id"] != evidence["evidence_id"]:
-        errors.append("decision does not match evidence")
+    cutoff = parse_ts(task["prediction_cutoff"])
+    locked = parse_ts(decision["locked_at"])
+    if decision["final"] == "INCOMPLETE":
+        if locked < cutoff:
+            errors.append("INCOMPLETE may only be recorded at or after prediction_cutoff")
+        return errors
+    if evidence is None or decision["evidence_id"] != evidence["evidence_id"]:
+        return errors + ["decision does not match evidence"]
     errors += leak_errors(task, evidence)
-    if not parse_ts(baseline["locked_at"]) <= parse_ts(decision["locked_at"]) <= parse_ts(task["prediction_cutoff"]):
+    if not parse_ts(baseline["locked_at"]) <= locked <= cutoff:
         errors.append("decision must be locked between baseline lock and prediction_cutoff")
     known = {o["id"] for o in evidence["observations"]} | {i["id"] for i in evidence["inferences"]}
+    steps = {st["step_id"] for st in baseline.get("wait_plan", [])}
     cited = [e for c in decision["changes"] for e in c["evidence_ids"]]
     cited += decision.get("skip_analysis", {}).get("evidence_ids", [])
     errors += [f"unknown evidence id {e}" for e in cited if e not in known]
-    bets, errs = apply_changes(baseline.get("bets", []), decision["changes"])
+    errors += [f"unknown plan step {sid}" for c in decision["changes"] for sid in c["plan_step_ids"] if sid not in steps]
+    bets, errs = apply_operations(baseline.get("bets", []), decision["changes"])
     errors += errs
     if decision["final"] == "BET":
         errors += bets_errors(decision["final_bets"])
-        final = {_key(b): b["units"] for b in decision["final_bets"]}
-        if final != bets:
+        if {_key(b): b["units"] for b in decision["final_bets"]} != bets:
             errors.append("final_bets do not equal baseline bets with changes applied")
     return errors
 
@@ -269,68 +296,177 @@ def review_errors(review, pred, decision=None, risk=None, config=None):
     errors = []
     if review["prediction_sha256"] != canonical_sha256(pred) or review["prediction_id"] != pred["prediction_id"]:
         errors.append("review does not reference the locked prediction")
+    if review["race_id"] != pred["race_id"]:
+        errors.append("review race_id does not match prediction")
     subject = pred
+    if pred["status"] == "WAIT" and decision is None:
+        errors.append("WAIT prediction must be reviewed through its decision")
     if decision is not None or "decision_id" in review:
         if decision is None or review.get("decision_sha256") != canonical_sha256(decision) or review.get("decision_id") != decision["decision_id"]:
             errors.append("review does not reference the locked decision")
         else:
             subject = decision
     order = review["result"]["finish_order"]
-    bets = subject_bets(subject)
-    expected = [{"bet_type": b["bet_type"], "combination": b["combination"], "hit": bet_hit(b, order)} for b in bets]
+    expected = [{"bet_type": b["bet_type"], "combination": b["combination"], "hit": bet_hit(b, order)} for b in subject_bets(subject)]
     if review["outcome"]["bet_results"] != expected:
         errors.append("outcome.bet_results does not match locked bets and result")
-    for p in review["result"]["payouts"]:
-        errors += combination_errors(p["bet_type"], p["combination"])
+    errors += result_errors(review["result"])
     if "settlement" in review:
         errors += settlement_errors(review, subject, risk, config)
     return errors
+
+
+def result_errors(result):
+    errors = []
+    keys = [_key(p) for p in result["payouts"]]
+    if len(keys) != len(set(keys)):
+        errors.append("duplicate payout entries")
+    info = result["refund_info"]
+    refunded = [_key(r) for r in info["refunded"]]
+    if len(refunded) != len(set(refunded)):
+        errors.append("duplicate refunded combinations")
+    for p in result["payouts"]:
+        errors += combination_errors(p["bet_type"], p["combination"])
+    for r in info["refunded"]:
+        errors += combination_errors(r["bet_type"], r["combination"])
+    if set(keys) & set(refunded):
+        errors.append("combination has both a win payout and a refund")
+    return errors
+
+
+def settle(subject, result, config):
+    """Deterministic settlement. Unknown refund status is never counted as a loss.
+
+    Returns (lines, unresolved_reasons, errors).
+    """
+    info = result["refund_info"]
+    refunded = {_key(r) for r in info["refunded"]}
+    payouts = {_key(p): p["payout_per_100_jpy"] for p in result["payouts"]}
+    order = result["finish_order"]
+    lines, reasons, errors = [], [], []
+    for b in subject_bets(subject):
+        k, stake = _key(b), b["units"] * config["unit_value_jpy"]
+        line = {"bet_type": b["bet_type"], "combination": b["combination"], "units": b["units"], "stake_jpy": stake}
+        if info["race_wide"] or k in refunded:
+            line.update(status="refund", returned_jpy=stake)
+        elif bet_hit(b, order):
+            win_key = ("trio", tuple(sorted(order))) if b["bet_type"] == "trio" else ("trifecta", tuple(order))
+            if win_key in payouts:
+                line.update(status="win", returned_jpy=payouts[win_key] * stake // 100)
+            elif info["status"] == "confirmed":
+                errors.append(f"missing official win payout for {k}")
+                continue
+            else:
+                line["status"] = "unresolved"
+                reasons.append(f"{k}: no payout and refund status {info['status']}")
+        elif info["status"] == "confirmed":
+            line.update(status="miss", returned_jpy=0)
+        else:
+            line["status"] = "unresolved"
+            reasons.append(f"{k}: refund status {info['status']}")
+        lines.append(line)
+    return lines, reasons, errors
 
 
 def settlement_errors(review, subject, risk, config):
     st = review["settlement"]
     if risk is None or risk["decision"] != "approved":
         return ["settlement requires an approved risk decision"]
+    if not subject_bets(subject):
+        return ["settlement present but there are no bets"]
     errors = []
     if st["risk_decision_id"] != risk["risk_decision_id"] or st["risk_decision_sha256"] != canonical_sha256(risk):
         errors.append("settlement does not reference the risk decision")
     if risk["subject_sha256"] != canonical_sha256(subject):
         errors.append("risk decision does not match reviewed subject")
-    order = review["result"]["finish_order"]
-    payouts = {(p["bet_type"], tuple(p["combination"])): p for p in review["result"]["payouts"]}
-    lines, total_stake, total_ret = [], 0, 0
-    for b in subject_bets(subject):
-        stake = b["units"] * config["unit_value_jpy"]
-        p = payouts.get(_key(b))
-        if p and p["kind"] == "refund":
-            status, ret = "refund", stake
-        elif bet_hit(b, order):
-            win = payouts.get(_key({"bet_type": b["bet_type"], "combination": sorted(order) if b["bet_type"] == "trio" else list(order)}))
-            if not win or win["kind"] != "win":
-                errors.append(f"missing official win payout for {_key(b)}")
-                continue
-            status, ret = "win", win["payout_per_100_jpy"] * stake // 100
-        else:
-            status, ret = "miss", 0
-        lines.append({"bet_type": b["bet_type"], "combination": b["combination"], "units": b["units"],
-                      "stake_jpy": stake, "status": status, "returned_jpy": ret})
-        total_stake += stake
-        total_ret += ret
-    if not errors and (st["lines"] != lines or st["total_stake_jpy"] != total_stake
-                       or st["total_returned_jpy"] != total_ret or st["profit_jpy"] != total_ret - total_stake):
-        errors.append("settlement does not match deterministic calculation")
-    if risk["total_stake_jpy"] != total_stake and not errors:
+    lines, reasons, errs = settle(subject, review["result"], config)
+    if errs:
+        return errors + errs
+    total_stake = sum(line["stake_jpy"] for line in lines)
+    if risk["total_stake_jpy"] != total_stake:
         errors.append("settlement stake differs from approved stake")
+    if st["lines"] != lines:
+        errors.append("settlement lines do not match deterministic calculation")
+    if "total_stake_jpy" in st and st["total_stake_jpy"] != total_stake:
+        errors.append("settlement total_stake_jpy mismatch")
+    if reasons:
+        if st["status"] != "unresolved":
+            errors.append("settlement must be unresolved: " + "; ".join(reasons))
+    elif st["status"] != "resolved":
+        errors.append("settlement is resolvable but marked unresolved")
+    else:
+        returned = sum(line["returned_jpy"] for line in lines)
+        if st["total_returned_jpy"] != returned or st["profit_jpy"] != returned - total_stake:
+            errors.append("settlement totals do not match deterministic calculation")
     return errors
 
 
-def validate_file(path):
+def validate_lifecycle(doc, config=None):
+    """Single entry point: schema validation of every record plus all cross-document checks.
+
+    `doc` is a lifecycle fixture (schemas/lifecycle.schema.json) holding the records of one race.
+    """
+    errors = schema_errors("lifecycle", doc)
+    if errors:
+        return errors
+    task, pred = doc["task"], doc["prediction"]
+    records = [("task", task, "task"), ("prediction", pred, "prediction")]
+    records += [(f"evidence[{i}]", e, "evidence") for i, e in enumerate(doc["evidence"])]
+    records += [(k, doc[k], k) for k in ("decision", "risk_decision", "review") if k in doc]
+    records += [(f"learning_proposals[{i}]", lp, "learning_proposal") for i, lp in enumerate(doc.get("learning_proposals", []))]
+    for label, rec, kind in records:
+        errors += [f"{label}: {e}" for e in schema_errors(kind, rec)]
+        if rec.get("synthetic") != doc["synthetic"]:
+            errors.append(f"{label}: synthetic flag differs from lifecycle")
+    if errors:
+        return errors
+    errors += prediction_errors(pred)
+    evid = {}
+    for e in doc["evidence"]:
+        if e["evidence_id"] in evid:
+            errors.append(f"duplicate evidence_id {e['evidence_id']}")
+        evid[e["evidence_id"]] = e
+        errors += evidence_errors(e)
+        errors += leak_errors(task, e)
+    if pred["evidence_id"] not in evid:
+        return errors + ["prediction evidence_id not in lifecycle evidence"]
+    errors += prediction_integrity_errors(task, evid[pred["evidence_id"]], pred)
+    decision = doc.get("decision")
+    if pred["status"] == "WAIT" and decision is None:
+        errors.append("WAIT baseline needs a decision (record INCOMPLETE if none was made before the cutoff)")
+    if decision is not None:
+        errors += decision_errors(task, pred, evid.get(decision.get("evidence_id")), decision)
+    subject = decision if decision is not None else (pred if pred["status"] == "PRE" else None)
+    risk = doc.get("risk_decision")
+    if risk is not None:
+        errors += risk_errors(risk, subject, config) if subject is not None else ["risk decision without a betting proposal"]
+    review = doc.get("review")
+    if review is not None:
+        errors += review_errors(review, pred, decision, risk, config)
+        if review["race_id"] != task["race_id"]:
+            errors.append("review does not match task")
+        lps = doc.get("learning_proposals", [])
+        if sorted(review["learning_proposal_ids"]) != sorted(lp["proposal_id"] for lp in lps):
+            errors.append("learning proposals do not match review.learning_proposal_ids")
+        errors += [f"proposal {lp['proposal_id']} cites unknown review" for lp in lps for ev in lp["evidence"] if ev["review_id"] != review["review_id"]]
+    elif doc.get("learning_proposals"):
+        errors.append("learning proposals require a review")
+    return errors
+
+
+def validate_file(path, warnings=None):
     doc = json.loads(Path(path).read_text())
     name = Path(path).name
     if name.startswith("units-"):
         return schema_errors("units_config", doc)
     if name.startswith("evidence-vocabulary"):
         return []
+    if name.startswith("lifecycle"):
+        errors = validate_lifecycle(doc)
+        if not errors and warnings is not None:
+            for e in doc["evidence"]:
+                warnings += evidence_warnings(e)
+        return errors
     for k in KINDS:
         if name.startswith(k):
             kind = k
@@ -344,15 +480,20 @@ def validate_file(path):
         errors += bets_errors(doc.get("final_bets", []))
     if not errors and kind == "evidence":
         errors += evidence_errors(doc)
+        if warnings is not None:
+            warnings += evidence_warnings(doc)
     return errors
 
 
 def main(argv):
     failed = False
     for path in argv:
-        for err in validate_file(path):
+        warnings = []
+        for err in validate_file(path, warnings):
             failed = True
             print(f"{path}: {err}")
+        for w in warnings:
+            print(f"{path}: warning: {w}", file=sys.stderr)
     return 1 if failed else 0
 
 

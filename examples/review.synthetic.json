@@ -19,7 +19,6 @@
           4,
           2
         ],
-        "kind": "win",
         "payout_per_100_jpy": 1230
       },
       {
@@ -29,10 +28,15 @@
           2,
           4
         ],
-        "kind": "win",
         "payout_per_100_jpy": 380
       }
     ],
+    "refund_info": {
+      "status": "confirmed",
+      "race_wide": false,
+      "refunded": [],
+      "source_url": "https://example.invalid/synthetic/refunds"
+    },
     "source_url": "https://example.invalid/synthetic/result",
     "confirmed_at": "2000-01-01T15:10:00+09:00"
   },
@@ -58,7 +62,37 @@
       }
     ]
   },
+  "prediction_error": {
+    "summary": "SYNTHETIC: boat 4 underrated",
+    "boat_errors": [
+      {
+        "boat": 4,
+        "note": "finished 2nd despite a weak assessment"
+      }
+    ]
+  },
+  "decision_quality": {
+    "rating": "acceptable",
+    "rationale": "SYNTHETIC: sound given pre-race information"
+  },
+  "protocol_compliance": {
+    "checks": [
+      {
+        "rule": "bets locked before cutoff",
+        "passed": true
+      },
+      {
+        "rule": "no post-race evidence used",
+        "passed": true
+      }
+    ]
+  },
+  "learning_proposal_ids": [
+    "SYN-LP-1"
+  ],
+  "synthetic": true,
   "settlement": {
+    "status": "resolved",
     "risk_decision_id": "SYN-RISK-1",
     "risk_decision_sha256": "09ada147ed2098268503abf691b8e547a8c101f2b4095e8b0201888a70a8f3a6",
     "lines": [
@@ -90,34 +124,5 @@
     "total_stake_jpy": 500,
     "total_returned_jpy": 760,
     "profit_jpy": 260
-  },
-  "prediction_error": {
-    "summary": "SYNTHETIC: boat 4 underrated",
-    "boat_errors": [
-      {
-        "boat": 4,
-        "note": "finished 2nd despite a weak assessment"
-      }
-    ]
-  },
-  "decision_quality": {
-    "rating": "acceptable",
-    "rationale": "SYNTHETIC: sound given pre-race information"
-  },
-  "protocol_compliance": {
-    "checks": [
-      {
-        "rule": "bets locked before cutoff",
-        "passed": true
-      },
-      {
-        "rule": "no post-race evidence used",
-        "passed": true
-      }
-    ]
-  },
-  "learning_proposal_ids": [
-    "SYN-LP-1"
-  ],
-  "synthetic": true
+  }
 }

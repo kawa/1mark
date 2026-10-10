@@ -1,0 +1,295 @@
+{
+  "schema_version": "1.0.0",
+  "synthetic": true,
+  "task": {
+    "schema_version": "1.0.0",
+    "task_id": "SYN-TASK-1",
+    "task_type": "predict",
+    "race_id": "20000101-01-01",
+    "scheduled_start": "2000-01-01T15:00:00+09:00",
+    "prediction_cutoff": "2000-01-01T14:50:00+09:00",
+    "synthetic": true
+  },
+  "evidence": [
+    {
+      "schema_version": "1.0.0",
+      "vocabulary_version": "1.0.0",
+      "evidence_id": "SYN-EV-1",
+      "race_id": "20000101-01-01",
+      "synthetic": true,
+      "observations": [
+        {
+          "id": "o1",
+          "field": "x-syn:national_win_rate",
+          "value": 7.1,
+          "raw_value": "7.1",
+          "source_url": "https://example.invalid/synthetic/o1",
+          "observed_at": "2000-01-01T10:00:00+09:00",
+          "phase": "pre_race",
+          "boat": 1
+        },
+        {
+          "id": "o2",
+          "field": "x-syn:national_win_rate",
+          "value": 4.2,
+          "raw_value": "4.2",
+          "source_url": "https://example.invalid/synthetic/o2",
+          "observed_at": "2000-01-01T10:00:00+09:00",
+          "phase": "pre_race",
+          "boat": 4
+        },
+        {
+          "id": "o3",
+          "field": "wind_speed_mps",
+          "value": 2,
+          "raw_value": "2",
+          "source_url": "https://example.invalid/synthetic/o3",
+          "observed_at": "2000-01-01T10:00:00+09:00",
+          "phase": "pre_race"
+        },
+        {
+          "id": "o4",
+          "field": "motor_top2_rate",
+          "value": 45.5,
+          "raw_value": "45.5",
+          "source_url": "https://example.invalid/synthetic/o4",
+          "observed_at": "2000-01-01T10:00:00+09:00",
+          "phase": "pre_race",
+          "boat": 1
+        }
+      ],
+      "inferences": [
+        {
+          "id": "i1",
+          "statement": "SYNTHETIC: boat 1 likely strong from the inside course",
+          "based_on": [
+            "o1",
+            "o4"
+          ]
+        }
+      ],
+      "missing_data": [
+        {
+          "field": "exhibition_time",
+          "reason": "SYNTHETIC: exhibition not yet held"
+        }
+      ]
+    },
+    {
+      "schema_version": "1.0.0",
+      "vocabulary_version": "1.0.0",
+      "evidence_id": "SYN-EV-2",
+      "race_id": "20000101-01-01",
+      "synthetic": true,
+      "observations": [
+        {
+          "id": "e1",
+          "field": "exhibition_time",
+          "value": 6.95,
+          "raw_value": "6.95",
+          "source_url": "https://example.invalid/synthetic/e1",
+          "observed_at": "2000-01-01T14:20:00+09:00",
+          "phase": "pre_race",
+          "boat": 1
+        },
+        {
+          "id": "e2",
+          "field": "exhibition_time",
+          "value": 6.71,
+          "raw_value": "6.71",
+          "source_url": "https://example.invalid/synthetic/e2",
+          "observed_at": "2000-01-01T14:20:00+09:00",
+          "phase": "pre_race",
+          "boat": 4
+        },
+        {
+          "id": "e3",
+          "field": "exhibition_st",
+          "value": 0.18,
+          "raw_value": "0.18",
+          "source_url": "https://example.invalid/synthetic/e3",
+          "observed_at": "2000-01-01T14:25:00+09:00",
+          "phase": "pre_race",
+          "boat": 1
+        },
+        {
+          "id": "e4",
+          "field": "entry_course",
+          "value": 1,
+          "raw_value": "1",
+          "source_url": "https://example.invalid/synthetic/e4",
+          "observed_at": "2000-01-01T14:30:00+09:00",
+          "phase": "pre_race",
+          "boat": 1
+        },
+        {
+          "id": "e5",
+          "field": "wind_direction",
+          "value": "NNE",
+          "raw_value": "NNE",
+          "source_url": "https://example.invalid/synthetic/e5",
+          "observed_at": "2000-01-01T14:30:00+09:00",
+          "phase": "pre_race"
+        },
+        {
+          "id": "e6",
+          "field": "wave_height_cm",
+          "value": 3,
+          "raw_value": "3",
+          "source_url": "https://example.invalid/synthetic/e6",
+          "observed_at": "2000-01-01T14:30:00+09:00",
+          "phase": "pre_race"
+        }
+      ],
+      "inferences": [
+        {
+          "id": "ei1",
+          "statement": "SYNTHETIC: boat 1 exhibition is slow; boat 4 looks faster",
+          "based_on": [
+            "e1",
+            "e2"
+          ]
+        }
+      ],
+      "missing_data": []
+    }
+  ],
+  "prediction": {
+    "schema_version": "1.0.0",
+    "protocol_version": "1.0.0",
+    "knowledge_version": "none",
+    "task_id": "SYN-TASK-1",
+    "race_id": "20000101-01-01",
+    "evidence_id": "SYN-EV-1",
+    "locked_at": "2000-01-01T10:30:00+09:00",
+    "synthetic": true,
+    "prediction_id": "SYN-PRED-WAIT",
+    "status": "WAIT",
+    "boat_assessments": [
+      {
+        "boat": 1,
+        "assessment": "strong",
+        "rationale": "SYNTHETIC rationale for boat 1",
+        "evidence_ids": [
+          "o1",
+          "i1"
+        ]
+      },
+      {
+        "boat": 2,
+        "assessment": "moderate",
+        "rationale": "SYNTHETIC rationale for boat 2",
+        "evidence_ids": []
+      },
+      {
+        "boat": 3,
+        "assessment": "weak",
+        "rationale": "SYNTHETIC rationale for boat 3",
+        "evidence_ids": []
+      },
+      {
+        "boat": 4,
+        "assessment": "moderate",
+        "rationale": "SYNTHETIC rationale for boat 4",
+        "evidence_ids": []
+      },
+      {
+        "boat": 5,
+        "assessment": "weak",
+        "rationale": "SYNTHETIC rationale for boat 5",
+        "evidence_ids": []
+      },
+      {
+        "boat": 6,
+        "assessment": "weak",
+        "rationale": "SYNTHETIC rationale for boat 6",
+        "evidence_ids": []
+      }
+    ],
+    "bets": [
+      {
+        "bet_type": "trifecta",
+        "combination": [
+          1,
+          2,
+          4
+        ],
+        "units": 3
+      },
+      {
+        "bet_type": "trio",
+        "combination": [
+          1,
+          2,
+          4
+        ],
+        "units": 2
+      }
+    ],
+    "wait_plan": [
+      {
+        "step_id": "step-1",
+        "observation": {
+          "field": "exhibition_time",
+          "boat": 1,
+          "source": "official exhibition"
+        },
+        "decision_threshold": "boat 1 exhibition time slower than 6.90 and slower than boat 4",
+        "expected_operations": [
+          {
+            "action": "add",
+            "bet_type": "trifecta",
+            "combination": [
+              4,
+              1,
+              2
+            ],
+            "units": 2
+          },
+          {
+            "action": "change_units",
+            "bet_type": "trio",
+            "combination": [
+              1,
+              2,
+              4
+            ],
+            "units": 1
+          },
+          {
+            "action": "remove",
+            "bet_type": "trifecta",
+            "combination": [
+              1,
+              2,
+              4
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "decision": {
+    "schema_version": "1.0.0",
+    "protocol_version": "1.0.0",
+    "knowledge_version": "none",
+    "task_id": "SYN-TASK-1",
+    "race_id": "20000101-01-01",
+    "baseline_prediction_id": "SYN-PRED-WAIT",
+    "baseline_sha256": "1306ed0fafdb071f1674c37daa7ec2c2586954e5da3232e7672c6617816d8d70",
+    "evidence_id": "SYN-EV-2",
+    "locked_at": "2000-01-01T14:40:00+09:00",
+    "synthetic": true,
+    "decision_id": "SYN-DEC-SKIP",
+    "final": "SKIP",
+    "changes": [],
+    "skip_analysis": {
+      "reason": "SYNTHETIC: exhibition contradicts baseline and no edge remains",
+      "evidence_ids": [
+        "e1",
+        "e3",
+        "ei1"
+      ]
+    }
+  }
+}
