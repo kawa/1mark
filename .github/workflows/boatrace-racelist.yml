@@ -36,3 +36,17 @@ jobs:
           name: boatrace-${{ inputs.date }}-${{ inputs.jcd }}-${{ inputs.rno }}
           path: out/
           if-no-files-found: warn
+      - name: Build and validate prediction package
+        env:
+          IN_DATE: ${{ inputs.date }}
+          IN_JCD: ${{ inputs.jcd }}
+          IN_RNO: ${{ inputs.rno }}
+        run: |
+          RNO=$(printf '%02d' "$((10#$IN_RNO))")
+          python -m onemark.package --evidence "out/evidence-${IN_DATE}-${IN_JCD}-${RNO}.json" \
+            --out "package/prediction-package-${IN_DATE}-${IN_JCD}-${RNO}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prediction-package-${{ inputs.date }}-${{ inputs.jcd }}-${{ inputs.rno }}
+          path: package/
+          if-no-files-found: error

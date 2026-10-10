@@ -202,7 +202,7 @@ def leak_errors(task, evidence):
     """Pre-race evidence must be pre_race and observed no later than the cutoff."""
     cutoff = parse_ts(task["prediction_cutoff"])
     errors = []
-    if cutoff > parse_ts(task["scheduled_start"]):
+    if "scheduled_start" in task and cutoff > parse_ts(task["scheduled_start"]):
         errors.append("prediction_cutoff is after scheduled_start")
     if evidence["race_id"] != task["race_id"]:
         errors.append("evidence does not match task")

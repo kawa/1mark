@@ -3,14 +3,20 @@
   "$id": "https://github.com/kawa/1mark/schemas/task.schema.json",
   "title": "Task: one race to predict or review",
   "type": "object", "additionalProperties": false,
-  "required": ["schema_version", "task_id", "task_type", "race_id", "scheduled_start", "prediction_cutoff", "synthetic"],
+  "required": ["schema_version", "task_id", "task_type", "race_id", "prediction_cutoff", "synthetic"],
   "properties": {
     "schema_version": {"const": "1.0.0"},
     "task_id": {"$ref": "_defs.schema.json#/$defs/id"},
     "task_type": {"enum": ["predict", "review"]},
     "race_id": {"$ref": "_defs.schema.json#/$defs/race_id"},
-    "scheduled_start": {"$ref": "_defs.schema.json#/$defs/timestamp"},
-    "prediction_cutoff": {"$ref": "_defs.schema.json#/$defs/timestamp", "description": "No evidence observed after this may be used; must be <= scheduled_start"},
-    "synthetic": {"type": "boolean"}
+    "scheduled_start": {"$ref": "_defs.schema.json#/$defs/timestamp", "description": "Optional; omitted when not officially known"},
+    "prediction_cutoff": {"$ref": "_defs.schema.json#/$defs/timestamp", "description": "No evidence observed after this may be used; must be <= scheduled_start when present"},
+    "synthetic": {"type": "boolean"},
+    "evidence_cutoff": {"$ref": "_defs.schema.json#/$defs/timestamp", "description": "Optional; latest information available to the prediction. Not the betting deadline"},
+    "betting_deadline": {"oneOf": [{"$ref": "_defs.schema.json#/$defs/timestamp"}, {"type": "null"}], "description": "Optional; official betting deadline, null if unknown"},
+    "execution_allowed": {"type": "boolean", "description": "Optional; false when the betting deadline is unknown"},
+    "prediction_phase": {"enum": ["pre_race"], "description": "Optional; set by the package generator"},
+    "objective": {"type": "string", "description": "Optional; human-readable task objective"},
+    "output_requirements": {"type": "object", "description": "Optional; machine-readable output contract"}
   }
 }
