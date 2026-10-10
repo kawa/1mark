@@ -7,6 +7,7 @@ import argparse
 import re
 import sys
 import time
+import unicodedata
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -140,14 +141,15 @@ def parse_racelist(html):
         if len(cells) < 8:
             raise ParseError(f"entry {idx}: expected >=8 cells, found {len(cells)}")
         boat_raw = _line(cells[0], 0)
-        if boat_raw != str(idx):
+        boat_norm = unicodedata.normalize("NFKC", boat_raw).strip() if boat_raw else boat_raw
+        if boat_norm != str(idx):
             raise ParseError(f"entry {idx}: boat number cell is {boat_raw!r}")
         head = re.match(r"(\d{4})\s*/\s*(\S+)$", _line(cells[2], 0) or "")
         if not head:
             raise ParseError(f"entry {idx}: cannot read registration number/class")
         f_raw, l_raw, st_raw = _flc(cells[3])
         f = {}
-        f["boat_number"] = (boat_raw, int(boat_raw))
+        f["boat_number"] = (boat_raw, int(boat_norm))
         f["racer_registration_number"] = (head.group(1), head.group(1))
         f["racer_class"] = (head.group(2), head.group(2))
         name = _line(cells[2], 1)

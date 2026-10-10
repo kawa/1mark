@@ -77,3 +77,13 @@ def test_fetch_retries_then_fails_without_network():
     with pytest.raises(b.FetchError):
         b.fetch(URL, retries=2, opener=opener, sleep=lambda s: None)
     assert len(calls) == 3 and "1mark" in calls[0]
+
+
+@pytest.mark.parametrize("n", range(1, 7))
+def test_fullwidth_boat_number_normalized(n):
+    full = chr(0xFF10 + n)
+    html = HTML.replace(f'rowspan="4">{n}</td>', f'rowspan="4">{full}</td>', 1)
+    assert full in html
+    entry = b.parse_racelist(html)[n - 1]
+    assert entry["boat"] == n
+    assert entry["fields"]["boat_number"] == (full, n)
