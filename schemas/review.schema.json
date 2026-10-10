@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kawa/1mark/schemas/review.schema.json",
+  "title": "Review record (post-outcome)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "protocol_version", "task_id", "prediction_status", "outcome", "prediction_assessment", "synthetic"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "protocol_version": {"type": "string", "minLength": 1},
+    "task_id": {"type": "string", "minLength": 1},
+    "prediction_status": {"enum": ["PRE", "WAIT", "SKIP", "UNAVAILABLE", "INCOMPLETE"]},
+    "outcome": {"type": "string", "minLength": 1},
+    "prediction_assessment": {"type": "string", "minLength": 1, "description": "Quality of the prediction, independent of money result"},
+    "risk_assessment": {"type": "string", "description": "Staking review, kept separate from prediction_assessment"},
+    "result_units": {"type": "number"},
+    "learning_proposal_ids": {"type": "array", "items": {"type": "string"}},
+    "synthetic": {"type": "boolean"}
+  }
+}

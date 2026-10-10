@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "protocol_version": "1.0.0",
+  "task_id": "SYNTHETIC-001",
+  "synthetic": true,
+  "status": "WAIT",
+  "prediction": {
+    "outcome": "Team A wins",
+    "probability": 0.6,
+    "rationale": "SYNTHETIC example rationale"
+  },
+  "change_conditions": [
+    {
+      "condition": "Key player ruled out",
+      "effect": "Lower probability to 0.5"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "protocol_version": "1.0.0",
+  "task_id": "SYNTHETIC-001",
+  "synthetic": true,
+  "status": "PRE",
+  "prediction": {
+    "outcome": "Team A wins",
+    "probability": 0.6,
+    "rationale": "SYNTHETIC example rationale"
+  },
+  "evidence_ids": [
+    "SYNTHETIC-EV-1"
+  ],
+  "risk_management": {
+    "finalized": true,
+    "bets": [
+      {
+        "market": "1X2",
+        "selection": "Team A",
+        "odds": 1.9,
+        "units": 1.0
+      }
+    ]
+  }
+}

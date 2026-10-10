@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0.0",
+  "protocol_version": "1.0.0",
+  "task_id": "SYNTHETIC-001",
+  "synthetic": true,
+  "status": "UNAVAILABLE",
+  "reason": "SYNTHETIC: event cancelled"
+}

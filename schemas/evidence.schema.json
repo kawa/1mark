@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kawa/1mark/schemas/evidence.schema.json",
+  "title": "Evidence item",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "task_id", "source", "collected_at", "claim", "synthetic"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "id": {"type": "string", "minLength": 1},
+    "task_id": {"type": "string", "minLength": 1},
+    "source": {"type": "string", "minLength": 1},
+    "collected_at": {"type": "string", "format": "date-time"},
+    "claim": {"type": "string", "minLength": 1},
+    "reliability": {"enum": ["low", "medium", "high"]},
+    "synthetic": {"type": "boolean", "description": "true for fabricated example data"}
+  }
+}

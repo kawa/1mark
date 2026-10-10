@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "protocol_version": "1.0.0",
+  "task_id": "SYNTHETIC-001",
+  "prediction_status": "PRE",
+  "outcome": "Team A won (SYNTHETIC)",
+  "prediction_assessment": "Reasonable",
+  "risk_assessment": "Stake sized ok",
+  "result_units": 0.9,
+  "learning_proposal_ids": [
+    "SYNTHETIC-LP-1"
+  ],
+  "synthetic": true
+}
