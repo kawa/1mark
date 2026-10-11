@@ -127,9 +127,49 @@ def test_post_race_information_cannot_leak():
     assert v.prediction_integrity_errors(task, late, pred)
     post = bad("evidence", lambda d: d["observations"][0].update(phase="post_race"))
     assert v.prediction_integrity_errors(task, post, pred)
-    assert v.prediction_integrity_errors(task, load("evidence"), bad("prediction_pre", lambda d: d.update(locked_at="2000-01-01T14:55:00+09:00")))
+    assert v.prediction_integrity_errors(task, load("evidence"), bad("prediction_pre", lambda d: d.update(locked_at="2000-01-01T15:00:01+09:00")))
     unknown = bad("prediction_pre", lambda d: d["boat_assessments"][0].update(evidence_ids=["zzz"]))
     assert v.prediction_integrity_errors(task, load("evidence"), unknown)
+
+
+def _lock(locked_at, **task_over):
+    task = {**load("task"), **task_over}
+    pred = bad("prediction_pre", lambda d: d.update(locked_at=locked_at))
+    return v.prediction_integrity_errors(task, load("evidence"), pred)
+
+
+def test_lock_after_cutoff_before_deadline_is_valid():
+    assert _lock("2000-01-01T14:55:00+09:00") == []  # cutoff 14:50 < lock < scheduled_start 15:00
+    assert _lock("2000-01-01T14:50:00+09:00") == []  # exactly at cutoff
+    assert _lock("2000-01-01T15:00:00+09:00") == []  # exactly at scheduled_start
+    assert _lock("2000-01-01T14:58:00+09:00", betting_deadline="2000-01-01T14:58:00+09:00") == []
+
+
+def test_lock_after_deadline_is_not_actionable():
+    assert any("applicable deadline" in e for e in _lock("2000-01-01T15:00:01+09:00"))
+    assert any("applicable deadline" in e for e in _lock("2000-01-01T14:56:00+09:00", betting_deadline="2000-01-01T14:55:00+09:00"))
+    # the scheduled deadline wins over scheduled_start when present
+    assert _lock("2000-01-01T14:56:00+09:00", betting_deadline=None) == []
+
+
+def test_lock_before_evidence_rejected_and_not_backdated():
+    assert any("before the latest evidence" in e for e in _lock("2000-01-01T09:00:00+09:00"))
+    pred = load("prediction_pre")
+    assert "locked_at" in pred  # required; absent lock time is a schema failure, never replaced by the cutoff
+    assert not ok("prediction", bad("prediction_pre", lambda d: d.pop("locked_at")))
+
+
+def test_evidence_after_cutoff_still_rejected_with_late_lock():
+    late = bad("evidence", lambda d: d["observations"][0].update(observed_at="2000-01-01T14:50:01+09:00"))
+    pred = bad("prediction_pre", lambda d: d.update(locked_at="2000-01-01T14:55:00+09:00"))
+    assert any("post-cutoff" in e for e in v.prediction_integrity_errors(load("task"), late, pred))
+    ok_ev = bad("evidence", lambda d: d["observations"][0].update(observed_at="2000-01-01T14:50:00+09:00"))
+    assert v.prediction_integrity_errors(load("task"), ok_ev, pred) == []
+
+
+def test_existing_prediction_examples_remain_valid():
+    for name in ("prediction_pre", "prediction_wait", "prediction_skip"):
+        assert v.prediction_integrity_errors(load("task"), load("evidence"), load(name)) == []
 
 
 # --- review and learning
