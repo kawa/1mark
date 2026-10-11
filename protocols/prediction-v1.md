@@ -32,7 +32,7 @@ A separate `decision` record (`schemas/decision.schema.json`) references the loc
 - BET: `final_bets` must equal the baseline bets with the changes applied (validator recomputes).
 - SKIP: `skip_analysis` with reason and evidence; no changes or bets.
 - INCOMPLETE: recorded at or after `prediction_cutoff` when no valid BET/SKIP decision exists. It never becomes SKIP, carries no bets, and cannot be risk-approved.
-- BET/SKIP must be locked after the baseline and no later than `prediction_cutoff`.
+- BET/SKIP must be locked at or after the baseline lock, at or after its latest Evidence observation, and no later than the applicable (scheduled) deadline, as for PRE/SKIP predictions; `prediction_cutoff` only bounds Evidence observation. INCOMPLETE is unchanged.
 
 ## Bets, units and risk
 - Trifecta (3連単) is ordered; trio (3連複) is stored ascending. A trifecta and a trio on the same boats are distinct products and may coexist.
@@ -41,7 +41,9 @@ A separate `decision` record (`schemas/decision.schema.json`) references the loc
 
 ## Determinism and versions
 - Every record carries `schema_version`, and predictions carry `protocol_version` and `knowledge_version`.
-- A prediction is locked by `locked_at <= task.prediction_cutoff <= scheduled_start`. Its identity is the SHA-256 of its canonical JSON (`onemark.validate.canonical_sha256`); risk decisions and reviews cite that hash.
+- Timestamps: `prediction_cutoff` is the latest permissible observation time of pre-race Evidence. `locked_at` is the actual time the prediction was finalized; it may be later than `prediction_cutoff` (Evidence is generated first, the AI locks afterwards) but must be no earlier than the latest Evidence observation and no later than the applicable deadline (`task.betting_deadline`, else `scheduled_start`). `locked_at` is never backdated or replaced by the cutoff. The deadline is the SCHEDULED one (締切予定時刻), so a passing check does not prove betting was still open or the prediction actionable; no actual close time is recorded. WAIT baselines/decisions keep their existing `locked_at <= prediction_cutoff` rules (unchanged).
+- Workflow roles: in the seven-step workflow the AI generates PRE or SKIP; WAIT is a user-selected workflow state (existing WAIT records stay valid). Purchase prioritization is independent of PRE/SKIP and has no Schema in this protocol version.
+- Identity: Its identity is the SHA-256 of its canonical JSON (`onemark.validate.canonical_sha256`); risk decisions and reviews cite that hash.
 - Rules a schema cannot express (ascending trios, no duplicate bets, WAIT change application, stake from config, hit calculation, settlement, evidence vocabulary and time consistency) are in `onemark/validate.py` and tested. `validate_lifecycle` is the single entry point: it schema-validates every record of a race and runs all cross-document checks (prediction, WAIT decision, risk decision, result, review, settlement, learning proposals). Run it on `examples/lifecycle_*.synthetic.json` via `python -m onemark.validate`; CI does.
 
 ## Evidence integrity

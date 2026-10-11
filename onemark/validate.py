@@ -263,6 +263,21 @@ def leak_errors(task, evidence):
     return errors
 
 
+def lock_time_errors(task, evidence, record):
+    """locked_at is the actual finalization time (never substituted). It may be later than prediction_cutoff, which only
+    bounds Evidence observation, but it must not precede the Evidence it used nor follow the applicable deadline.
+    The applicable deadline is task.betting_deadline, else scheduled_start. Both are SCHEDULED times: passing this
+    check does not prove betting was still open (that needs the actual close time, which is not recorded)."""
+    errors = []
+    locked = parse_ts(record["locked_at"])
+    if evidence["observations"] and locked < max(parse_ts(o["observed_at"]) for o in evidence["observations"]):
+        errors.append("record locked before the latest evidence observation")
+    deadline = task.get("betting_deadline") or task.get("scheduled_start")
+    if deadline and locked > parse_ts(deadline):
+        errors.append("record locked after the applicable deadline; not an actionable pre-race record")
+    return errors
+
+
 def prediction_integrity_errors(task, evidence, pred):
     """Cross-document rules, including post-race leakage prevention."""
     errors = leak_errors(task, evidence)
@@ -270,8 +285,7 @@ def prediction_integrity_errors(task, evidence, pred):
         errors.append("prediction does not match task")
     if pred["evidence_id"] != evidence["evidence_id"]:
         errors.append("prediction does not match evidence")
-    if parse_ts(pred["locked_at"]) > parse_ts(task["prediction_cutoff"]):
-        errors.append("prediction locked after prediction_cutoff")
+    errors += lock_time_errors(task, evidence, pred)
     known = {o["id"] for o in evidence["observations"]} | {i["id"] for i in evidence["inferences"]}
     cited = [e for a in pred.get("boat_assessments", []) for e in a["evidence_ids"]]
     cited += pred.get("skip_analysis", {}).get("evidence_ids", [])
@@ -301,8 +315,9 @@ def decision_errors(task, baseline, evidence, decision):
     if evidence is None or decision["evidence_id"] != evidence["evidence_id"]:
         return errors + ["decision does not match evidence"]
     errors += leak_errors(task, evidence)
-    if not parse_ts(baseline["locked_at"]) <= locked <= cutoff:
-        errors.append("decision must be locked between baseline lock and prediction_cutoff")
+    if locked < parse_ts(baseline["locked_at"]):
+        errors.append("decision must be locked at or after the baseline lock")
+    errors += lock_time_errors(task, evidence, decision)
     known = {o["id"] for o in evidence["observations"]} | {i["id"] for i in evidence["inferences"]}
     steps = {st["step_id"] for st in baseline.get("wait_plan", [])}
     cited = [e for c in decision["changes"] for e in c["evidence_ids"]]

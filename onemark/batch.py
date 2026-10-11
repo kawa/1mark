@@ -52,7 +52,8 @@ def process_race(date, jcd, rno, out_dir, fetcher=br.fetch, schedule=None, now=_
         html_path.write_text(html, encoding="utf-8")
         result["html"] = f"{race_dir.name}/{html_path.name}"
         try:
-            doc = br.build_evidence(br.parse_racelist(html), date, jcd, rno, url)
+            doc = br.build_evidence(br.parse_racelist(html), date, jcd, rno, url,
+                                 observed_at=now().astimezone(br.JST).isoformat(timespec="seconds"))
         except br.ParseError as e:
             raise StageError("parse", str(e))
         ev_path = race_dir / f"evidence-{base}.json"
