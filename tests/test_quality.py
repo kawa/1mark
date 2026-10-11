@@ -71,6 +71,18 @@ def test_numeric_claims_are_review_prompts_not_validation_failures():
     assert not v.prediction_errors(pred)
 
 
+def test_japanese_numeric_claims_are_review_prompts_not_failures():
+    pred = copy.deepcopy(load("prediction_v11_pre"))
+    pred["bet_rationale"]["total_units"]["reason"] = "独自スコア8.5点でこの組み合わせを選ぶ。"
+    pred["timing_rationale"] = "PRE判定の閾値75を超えたため、今決定する。"
+
+    warnings = v.prediction_quality_warnings(pred)
+
+    assert any("numerical scoring" in warning for warning in warnings)
+    assert any("PRE/SKIP threshold" in warning for warning in warnings)
+    assert not v.prediction_errors(pred)
+
+
 def test_cross_race_warnings_do_not_apply_to_historical_protocol_versions():
     first = prediction_for_race("20000101-01-01", "PRED-1", "same rationale")
     second = prediction_for_race("20000101-01-02", "PRED-2", "same rationale")
@@ -91,6 +103,31 @@ def test_identical_rationales_across_races_are_flagged():
     assert len(warnings) == 2
     assert all("identical explanation wording" in warning for _, warning in warnings)
     assert {source for source, _ in warnings} == {"first.json", "second.json"}
+
+
+def test_identical_japanese_rationales_across_races_are_flagged():
+    first = prediction_for_race("20000101-01-01", "PRED-1", "Toda race 1")
+    second = prediction_for_race("20000101-01-02", "PRED-2", "Toda race 2")
+    generic = "この組み合わせは利用可能な証拠によって支持されています。"
+    first["bet_rationale"]["selections"][0]["reason"] = generic
+    second["bet_rationale"]["selections"][0]["reason"] = generic
+
+    warnings = v.batch_prediction_quality_warnings([("first.json", first), ("second.json", second)])
+
+    matches = [warning for _, warning in warnings if "bet_rationale.selections[0].reason" in warning]
+    assert len(matches) == 2
+    assert all("identical explanation wording" in warning for warning in matches)
+
+
+def test_different_japanese_rationales_across_races_are_not_flagged():
+    first = prediction_for_race("20000101-01-01", "PRED-1", "Toda race 1")
+    second = prediction_for_race("20000101-01-02", "PRED-2", "Toda race 2")
+    first["bet_rationale"]["selections"][0]["reason"] = "1号艇の当地成績と枠番を踏まえた組み合わせです。"
+    second["bet_rationale"]["selections"][0]["reason"] = "4号艇の展示気配とモーター実績を重視した組み合わせです。"
+
+    warnings = v.batch_prediction_quality_warnings([("first.json", first), ("second.json", second)])
+
+    assert not any("bet_rationale.selections[0].reason" in warning for _, warning in warnings)
 
 
 def test_race_specific_rationales_and_similar_bets_are_not_flagged():

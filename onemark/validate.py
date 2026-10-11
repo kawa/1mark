@@ -8,6 +8,7 @@ import hashlib
 import json
 import re
 import sys
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 
@@ -257,6 +258,16 @@ _STATUS_THRESHOLD_RE = re.compile(
     r"\b.{0,24}\d+(?:\.\d+)?",
     re.IGNORECASE,
 )
+_JA_NUMERIC_METHOD_RE = re.compile(
+    r"(?:スコア|採点|重み|ウェイト|ウェート|確率|信頼度)"
+    r"\s*(?:は|が|を|として|[:：=])?\s*\d+(?:[.．]\d+)?\s*(?:点|％|%|割)?"
+    r"|\d+(?:[.．]\d+)?\s*(?:点|％|%|割)?\s*(?:の)?"
+    r"(?:スコア|重み|ウェイト|ウェート|確率|信頼度)"
+)
+_JA_STATUS_THRESHOLD_RE = re.compile(
+    r"(?:PRE|SKIP).{0,48}(?:閾値|しきい値|基準|カットオフ).{0,24}\d+(?:[.．]\d+)?",
+    re.IGNORECASE,
+)
 
 
 def prediction_quality_warnings(pred):
@@ -267,7 +278,12 @@ def prediction_quality_warnings(pred):
     for path, text in _prediction_explanations(pred):
         if not isinstance(text, str) or not text.strip():
             warnings.append(f"machine-checkable: {path} has no explanation text")
-        elif _NUMERIC_METHOD_RE.search(text) or _STATUS_THRESHOLD_RE.search(text):
+        elif (
+            _NUMERIC_METHOD_RE.search(text)
+            or _STATUS_THRESHOLD_RE.search(text)
+            or _JA_NUMERIC_METHOD_RE.search(text)
+            or _JA_STATUS_THRESHOLD_RE.search(text)
+        ):
             warnings.append(
                 f"human review: {path} mentions numerical scoring, weights, or a PRE/SKIP threshold; "
                 "verify its basis in protocol or validated knowledge"
@@ -281,7 +297,12 @@ def prediction_quality_warnings(pred):
 
 
 def _normalize_explanation(text):
-    return " ".join(re.findall(r"[a-z0-9]+", text.casefold()))
+    normalized = unicodedata.normalize("NFKC", text).casefold()
+    chars = [
+        char if unicodedata.category(char)[0] in ("L", "M", "N") else " "
+        for char in normalized
+    ]
+    return " ".join("".join(chars).split())
 
 
 def batch_prediction_quality_warnings(predictions):
