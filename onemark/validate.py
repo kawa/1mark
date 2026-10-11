@@ -220,6 +220,94 @@ def prediction_errors(pred):
     return errors
 
 
+def _prediction_explanations(pred):
+    """Yield labeled explanation text without changing the prediction document."""
+    for i, assessment in enumerate(pred.get("boat_assessments", [])):
+        yield f"boat_assessments[{i}].rationale", assessment.get("rationale")
+    evaluation = pred.get("evaluation", {})
+    for section, details in evaluation.items():
+        if isinstance(details, dict):
+            yield f"evaluation.{section}.summary", details.get("summary")
+        elif section == "primary_drivers":
+            for i, driver in enumerate(details):
+                yield f"evaluation.primary_drivers[{i}].influence", driver.get("influence")
+    rationale = pred.get("bet_rationale", {})
+    for i, selection in enumerate(rationale.get("selections", [])):
+        yield f"bet_rationale.selections[{i}].reason", selection.get("reason")
+    yield "bet_rationale.allocation", rationale.get("allocation")
+    yield "bet_rationale.total_units.reason", rationale.get("total_units", {}).get("reason")
+    for i, exclusion in enumerate(rationale.get("exclusions", [])):
+        yield f"bet_rationale.exclusions[{i}].reason", exclusion.get("reason")
+    yield "timing_rationale", pred.get("timing_rationale")
+    skip = pred.get("skip_analysis", {})
+    yield "skip_analysis.reason", skip.get("reason")
+    yield "skip_analysis.completed_analysis", skip.get("completed_analysis")
+
+
+_NUMERIC_METHOD_RE = re.compile(
+    r"\b(?:score|scoring|weight|weighted|probability|confidence)\b.{0,32}\b\d+(?:\.\d+)?\s*%?"
+    r"|\b\d+(?:\.\d+)?\s*%?\s*(?:weight|points?|score|probability|confidence)\b",
+    re.IGNORECASE,
+)
+_STATUS_THRESHOLD_RE = re.compile(
+    r"\b(?:PRE|SKIP)\b.{0,48}\b(?:threshold|cutoff|at least|at most|above|below|greater than|less than)"
+    r"\b.{0,24}\d+(?:\.\d+)?",
+    re.IGNORECASE,
+)
+
+
+def prediction_quality_warnings(pred):
+    """Return advisory review prompts; these never affect deterministic validation."""
+    if _semver(pred.get("protocol_version", "0.0.0")) < (1, 1, 0):
+        return []
+    warnings = []
+    for path, text in _prediction_explanations(pred):
+        if not isinstance(text, str) or not text.strip():
+            warnings.append(f"machine-checkable: {path} has no explanation text")
+        elif _NUMERIC_METHOD_RE.search(text) or _STATUS_THRESHOLD_RE.search(text):
+            warnings.append(
+                f"human review: {path} mentions numerical scoring, weights, or a PRE/SKIP threshold; "
+                "verify its basis in protocol or validated knowledge"
+            )
+    if pred.get("status") in ("PRE", "WAIT"):
+        warnings.append(
+            "human review: check that each selected bet, excluded alternative, and unit allocation "
+            "has a race-specific explanation grounded in the provided evidence"
+        )
+    return warnings
+
+
+def _normalize_explanation(text):
+    return " ".join(re.findall(r"[a-z0-9]+", text.casefold()))
+
+
+def batch_prediction_quality_warnings(predictions):
+    """Flag identical explanation wording reused across races as a review concern."""
+    uses = {}
+    for source, pred in predictions:
+        race_id = pred.get("race_id")
+        if not race_id:
+            continue
+        for path, text in _prediction_explanations(pred):
+            if isinstance(text, str):
+                normalized = _normalize_explanation(text)
+                if len(normalized) >= 12:
+                    uses.setdefault(normalized, []).append((source, race_id, path))
+
+    warnings = []
+    for occurrences in uses.values():
+        races = {race_id for _, race_id, _ in occurrences}
+        if len(races) < 2:
+            continue
+        locations = ", ".join(f"{source} ({race_id}: {path})" for source, race_id, path in occurrences)
+        warning = (
+            "human review: identical explanation wording appears across different races; "
+            f"confirm it is not generic boilerplate: {locations}"
+        )
+        warnings.extend((source, warning) for source, _, _ in occurrences)
+    return warnings
+
+
 def trio_of(finish_order):
     return sorted(finish_order)
 
@@ -537,6 +625,7 @@ def validate_file(path, warnings=None):
         if not errors and warnings is not None:
             for e in doc["evidence"]:
                 warnings += evidence_warnings(e)
+            warnings += prediction_quality_warnings(doc["prediction"])
         return errors
     for k in KINDS:
         if name.startswith(k):
@@ -547,6 +636,8 @@ def validate_file(path, warnings=None):
     errors = schema_errors(kind, doc)
     if not errors and kind == "prediction":
         errors += prediction_errors(doc)
+        if not errors and warnings is not None:
+            warnings += prediction_quality_warnings(doc)
     if not errors and kind in ("workflow_state", "exhibition_revision", "batch_summary"):
         from onemark import workflow as wf
 
@@ -563,13 +654,21 @@ def validate_file(path, warnings=None):
 
 def main(argv):
     failed = False
+    predictions = []
     for path in argv:
         warnings = []
-        for err in validate_file(path, warnings):
+        errors = validate_file(path, warnings)
+        for err in errors:
             failed = True
             print(f"{path}: {err}")
         for w in warnings:
             print(f"{path}: warning: {w}", file=sys.stderr)
+        if not errors and Path(path).name.startswith(("prediction", "lifecycle")):
+            doc = json.loads(Path(path).read_text())
+            pred = doc["prediction"] if Path(path).name.startswith("lifecycle") else doc
+            predictions.append((path, pred))
+    for path, warning in batch_prediction_quality_warnings(predictions):
+        print(f"{path}: warning: {warning}", file=sys.stderr)
     return 1 if failed else 0
 
 
