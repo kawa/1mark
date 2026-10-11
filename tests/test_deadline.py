@@ -62,7 +62,7 @@ def test_package_integration_and_execution_not_approved(tmp_path):
     s = parse()
     ev = tmp_path / "ev.json"
     from onemark import boatrace as br
-    ev.write_text(json.dumps(br.build_evidence(br.parse_racelist(HTML), DATE, JCD, 1, URL)), encoding="utf-8")
+    ev.write_text(json.dumps(br.build_evidence(br.parse_racelist(HTML), DATE, JCD, 1, URL, observed_at="2026-10-11T08:00:00+09:00")), encoding="utf-8")
     files = p.build_files(str(ev), evidence_cutoff="2026-10-11T09:00:00+09:00", schedule=s[1])
     m = json.loads(files["manifest.json"])
     t = json.loads(files["task.json"])
