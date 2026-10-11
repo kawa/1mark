@@ -2,13 +2,40 @@ name: BOAT RACE batch ingestion (12 races)
 on:
   workflow_dispatch:
     inputs:
+      venue:
+        description: "Venue"
+        type: choice
+        required: true
+        default: 戸田
+        options:
+          - 桐生
+          - 戸田
+          - 江戸川
+          - 平和島
+          - 多摩川
+          - 浜名湖
+          - 蒲郡
+          - 常滑
+          - 津
+          - 三国
+          - びわこ
+          - 住之江
+          - 尼崎
+          - 鳴門
+          - 丸亀
+          - 児島
+          - 宮島
+          - 徳山
+          - 下関
+          - 若松
+          - 芦屋
+          - 福岡
+          - 唐津
+          - 大村
       date:
-        description: "Race date YYYYMMDD"
-        required: true
-      jcd:
-        description: "Venue code (02 = Toda)"
-        required: true
-        default: "02"
+        description: "Race date YYYYMMDD (blank = today in JST)"
+        required: false
+        default: ""
 permissions:
   contents: read
 jobs:
@@ -20,32 +47,67 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
+      - name: Resolve date (JST default) and venue code
+        id: params
+        env:
+          IN_DATE: ${{ inputs.date }}
+          IN_VENUE: ${{ inputs.venue }}
+        run: python -m onemark.inputs --date "$IN_DATE" --venue "$IN_VENUE" >> "$GITHUB_OUTPUT"
       - name: Fetch entry lists, parse official betting deadlines (same pages), validate and package races 1-12
         id: ingest
         env:
-          IN_DATE: ${{ inputs.date }}
-          IN_JCD: ${{ inputs.jcd }}
+          RACE_DATE: ${{ steps.params.outputs.date }}
+          RACE_JCD: ${{ steps.params.outputs.jcd }}
         run: |
           status=0
-          python -m onemark.batch --date "$IN_DATE" --jcd "$IN_JCD" --out-dir batch-out || status=$?
+          python -m onemark.batch --date "$RACE_DATE" --jcd "$RACE_JCD" --out-dir batch-out || status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
           if [ "$status" -eq 1 ]; then
             echo "::warning::Some races failed; they are listed in the batch ZIP manifest as failed_races"
           elif [ "$status" -ne 0 ]; then
             exit "$status"
           fi
       - name: Build the batch ZIP (one upload for a fresh AI conversation)
-        run: |
-          python -m onemark.workflow batch-out --out batch-out/batch-package.zip
-          mkdir batch-upload
-          unzip -q batch-out/batch-package.zip -d batch-upload
+        run: python -m onemark.workflow batch-out --out "batch-out/batch-package-${{ steps.params.outputs.date }}-${{ steps.params.outputs.jcd }}.zip"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: boatrace-batch-${{ inputs.date }}-${{ inputs.jcd }}
+          name: boatrace-batch-${{ steps.params.outputs.date }}-${{ steps.params.outputs.jcd }}
           path: batch-out/
           if-no-files-found: warn
-      - uses: actions/upload-artifact@v4
+      - name: Upload the batch ZIP as-is (no extra ZIP wrapper)
+        id: upload
+        uses: actions/upload-artifact@v7
         with:
-          name: boatrace-batch-package-${{ inputs.date }}-${{ inputs.jcd }}
-          path: batch-upload/
+          path: batch-out/batch-package-${{ steps.params.outputs.date }}-${{ steps.params.outputs.jcd }}.zip
+          archive: false
           if-no-files-found: error
+      - name: Run summary
+        if: always()
+        env:
+          RACE_DATE: ${{ steps.params.outputs.date }}
+          IN_VENUE: ${{ inputs.venue }}
+          RACE_JCD: ${{ steps.params.outputs.jcd }}
+          INGEST_STATUS: ${{ steps.ingest.outputs.status }}
+          UPLOAD_OUTCOME: ${{ steps.upload.outcome }}
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          case "$INGEST_STATUS" in
+            0) st="All races processed" ;;
+            1) st="Completed with some failed races (see manifest failed_races)" ;;
+            "") st="Failed before ingestion finished" ;;
+            *) st="Failed (exit $INGEST_STATUS)" ;;
+          esac
+          {
+            echo "## BOAT RACE batch"
+            echo "- Date: $RACE_DATE"
+            echo "- Venue: $IN_VENUE (JCD $RACE_JCD)"
+            echo "- Status: $st"
+            echo "- Run: $RUN_URL"
+            if [ "$UPLOAD_OUTCOME" = "success" ] && [ -n "$ARTIFACT_URL" ]; then
+              echo "- Artifact: [Download batch ZIP]($ARTIFACT_URL)"
+            else
+              echo "- Artifact: not available"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
