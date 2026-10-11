@@ -72,13 +72,14 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: boatrace-batch-${{ steps.params.outputs.date }}-${{ steps.params.outputs.jcd }}
+          name: diagnostics-${{ steps.params.outputs.date }}-${{ steps.params.outputs.jcd }}
           path: batch-out/
           if-no-files-found: warn
       - name: Upload the batch ZIP as-is (no extra ZIP wrapper)
         id: upload
         uses: actions/upload-artifact@v7
         with:
+          name: prediction-package-${{ steps.params.outputs.date }}-${{ steps.params.outputs.jcd }}
           path: batch-out/batch-package-${{ steps.params.outputs.date }}-${{ steps.params.outputs.jcd }}.zip
           archive: false
           if-no-files-found: error

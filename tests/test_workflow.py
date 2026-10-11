@@ -240,7 +240,9 @@ def test_workflow_invokes_batch_zip_and_uploads_it():
     text = (EX.parent / ".github" / "workflows" / "boatrace-batch.yml").read_text()
     assert "python -m onemark.workflow batch-out" in text
     assert text.count("actions/upload-artifact@v4") == 1 and "path: batch-out/\n" in text
+    assert "name: diagnostics-${{ steps.params.outputs.date }}-${{ steps.params.outputs.jcd }}" in text
     assert text.count("actions/upload-artifact@v7") == 1 and "archive: false" in text
     assert "batch-package-${{ steps.params.outputs.date }}-${{ steps.params.outputs.jcd }}.zip" in text
+    assert "name: prediction-package-${{ steps.params.outputs.date }}-${{ steps.params.outputs.jcd }}" in text
     assert "steps.upload.outputs.artifact-url" in text and "GITHUB_STEP_SUMMARY" in text
     assert "|| status=$?" in text  # partial failures must not skip the ZIP step
