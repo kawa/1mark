@@ -293,9 +293,26 @@ def test_decision_skip_requires_analysis_and_no_bets():
 
 def test_decision_timing_and_leakage():
     assert decision_errors(bad("decision_bet", lambda d: d.update(locked_at="2000-01-01T10:00:00+09:00")))
-    assert decision_errors(bad("decision_bet", lambda d: d.update(locked_at="2000-01-01T14:55:00+09:00")))
+    assert decision_errors(bad("decision_bet", lambda d: d.update(locked_at="2000-01-01T15:00:01+09:00")))
     late = bad("evidence_exhibition", lambda d: d["observations"][0].update(observed_at="2000-01-01T15:30:00+09:00"))
     assert decision_errors(evidence=late)
+
+
+def test_decision_lock_after_cutoff_bounded_by_deadline():
+    for t in ("2000-01-01T14:50:00+09:00", "2000-01-01T14:55:00+09:00", "2000-01-01T15:00:00+09:00"):
+        assert decision_errors(bad("decision_bet", lambda d: d.update(locked_at=t))) == []
+    wait_lock = load("prediction_wait")["locked_at"]
+    assert any("baseline lock" in e for e in decision_errors(bad("decision_bet", lambda d: d.update(locked_at="2000-01-01T10:29:59+09:00"))))
+    assert wait_lock == "2000-01-01T10:30:00+09:00"
+    tight = {**load("task"), "betting_deadline": "2000-01-01T14:52:00+09:00"}
+    ev, base = load("evidence_exhibition"), load("prediction_wait")
+    assert v.decision_errors(tight, base, ev, bad("decision_bet", lambda d: d.update(locked_at="2000-01-01T14:52:00+09:00"))) == []
+    assert any("applicable deadline" in e for e in v.decision_errors(tight, base, ev, bad("decision_bet", lambda d: d.update(locked_at="2000-01-01T14:53:00+09:00"))))
+
+
+def test_incomplete_still_recorded_at_or_after_cutoff():
+    assert decision_errors(load("decision_incomplete")) == []
+    assert decision_errors(bad("decision_incomplete", lambda d: d.update(locked_at="2000-01-01T14:49:00+09:00")))
 
 
 def test_plan_and_decision_share_operation_vocabulary():

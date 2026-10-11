@@ -32,7 +32,7 @@ A separate `decision` record (`schemas/decision.schema.json`) references the loc
 - BET: `final_bets` must equal the baseline bets with the changes applied (validator recomputes).
 - SKIP: `skip_analysis` with reason and evidence; no changes or bets.
 - INCOMPLETE: recorded at or after `prediction_cutoff` when no valid BET/SKIP decision exists. It never becomes SKIP, carries no bets, and cannot be risk-approved.
-- BET/SKIP must be locked after the baseline and no later than `prediction_cutoff`.
+- BET/SKIP must be locked at or after the baseline lock, at or after its latest Evidence observation, and no later than the applicable (scheduled) deadline, as for PRE/SKIP predictions; `prediction_cutoff` only bounds Evidence observation. INCOMPLETE is unchanged.
 
 ## Bets, units and risk
 - Trifecta (3連単) is ordered; trio (3連複) is stored ascending. A trifecta and a trio on the same boats are distinct products and may coexist.

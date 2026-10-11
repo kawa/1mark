@@ -263,18 +263,18 @@ def leak_errors(task, evidence):
     return errors
 
 
-def lock_time_errors(task, evidence, pred):
+def lock_time_errors(task, evidence, record):
     """locked_at is the actual finalization time (never substituted). It may be later than prediction_cutoff, which only
     bounds Evidence observation, but it must not precede the Evidence it used nor follow the applicable deadline.
     The applicable deadline is task.betting_deadline, else scheduled_start. Both are SCHEDULED times: passing this
     check does not prove betting was still open (that needs the actual close time, which is not recorded)."""
     errors = []
-    locked = parse_ts(pred["locked_at"])
+    locked = parse_ts(record["locked_at"])
     if evidence["observations"] and locked < max(parse_ts(o["observed_at"]) for o in evidence["observations"]):
-        errors.append("prediction locked before the latest evidence observation")
+        errors.append("record locked before the latest evidence observation")
     deadline = task.get("betting_deadline") or task.get("scheduled_start")
     if deadline and locked > parse_ts(deadline):
-        errors.append("prediction locked after the applicable deadline; not an actionable pre-race prediction")
+        errors.append("record locked after the applicable deadline; not an actionable pre-race record")
     return errors
 
 
@@ -315,8 +315,9 @@ def decision_errors(task, baseline, evidence, decision):
     if evidence is None or decision["evidence_id"] != evidence["evidence_id"]:
         return errors + ["decision does not match evidence"]
     errors += leak_errors(task, evidence)
-    if not parse_ts(baseline["locked_at"]) <= locked <= cutoff:
-        errors.append("decision must be locked between baseline lock and prediction_cutoff")
+    if locked < parse_ts(baseline["locked_at"]):
+        errors.append("decision must be locked at or after the baseline lock")
+    errors += lock_time_errors(task, evidence, decision)
     known = {o["id"] for o in evidence["observations"]} | {i["id"] for i in evidence["inferences"]}
     steps = {st["step_id"] for st in baseline.get("wait_plan", [])}
     cited = [e for c in decision["changes"] for e in c["evidence_ids"]]
