@@ -289,7 +289,7 @@ def batch_prediction_quality_warnings(predictions):
     uses = {}
     for source, pred in predictions:
         race_id = pred.get("race_id")
-        if not race_id:
+        if not race_id or _semver(pred.get("protocol_version", "0.0.0")) < (1, 1, 0):
             continue
         for path, text in _prediction_explanations(pred):
             if isinstance(text, str):

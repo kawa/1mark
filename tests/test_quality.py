@@ -59,7 +59,9 @@ def test_quality_warnings_are_advisory_and_do_not_mutate_prediction():
 
 def test_numeric_claims_are_review_prompts_not_validation_failures():
     pred = copy.deepcopy(load("prediction_v11_pre"))
-    pred["bet_rationale"]["total_units"]["reason"] = "A score of 8.5 gives this scenario priority."
+    pred["bet_rationale"]["total_units"]["reason"] = (
+        "A score of 8.5 and a weight of 2.5 give this scenario priority."
+    )
     pred["timing_rationale"] = "Choose PRE only above a threshold of 75."
 
     warnings = v.prediction_quality_warnings(pred)
@@ -67,6 +69,14 @@ def test_numeric_claims_are_review_prompts_not_validation_failures():
     assert any("numerical scoring" in warning for warning in warnings)
     assert any("PRE/SKIP threshold" in warning for warning in warnings)
     assert not v.prediction_errors(pred)
+
+
+def test_cross_race_warnings_do_not_apply_to_historical_protocol_versions():
+    first = prediction_for_race("20000101-01-01", "PRED-1", "same rationale")
+    second = prediction_for_race("20000101-01-02", "PRED-2", "same rationale")
+    first["protocol_version"] = second["protocol_version"] = "1.0.0"
+
+    assert v.batch_prediction_quality_warnings([("first.json", first), ("second.json", second)]) == []
 
 
 def test_identical_rationales_across_races_are_flagged():
