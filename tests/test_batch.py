@@ -1,5 +1,6 @@
 import json
 import zipfile
+from datetime import datetime
 from pathlib import Path
 
 from onemark import batch as b
@@ -10,8 +11,11 @@ HTML = (Path(__file__).parent / "fixtures" / "racelist.20261011.toda.html").read
 DATE, JCD = "20261011", "02"
 
 
+BEFORE_ALL_DEADLINES = lambda: datetime.fromisoformat("2026-10-11T08:00:00+09:00")  # first deadline is 10:47
+
+
 def run(tmp_path, fetcher):
-    return b.run_batch(DATE, JCD, tmp_path, fetcher=fetcher, delay=0, sleep=lambda s: None)
+    return b.run_batch(DATE, JCD, tmp_path, fetcher=fetcher, delay=0, sleep=lambda s: None, now=BEFORE_ALL_DEADLINES)
 
 
 def test_all_twelve_processed_and_layout(tmp_path):
