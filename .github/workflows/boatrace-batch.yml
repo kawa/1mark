@@ -79,6 +79,7 @@ jobs:
         id: upload
         uses: actions/upload-artifact@v7
         with:
+          name: prediction-package-${{ steps.params.outputs.date }}-${{ steps.params.outputs.jcd }}
           path: batch-out/batch-package-${{ steps.params.outputs.date }}-${{ steps.params.outputs.jcd }}.zip
           archive: false
           if-no-files-found: error
