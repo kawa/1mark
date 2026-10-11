@@ -226,22 +226,25 @@ def _prediction_explanations(pred):
         yield f"boat_assessments[{i}].rationale", assessment.get("rationale")
     evaluation = pred.get("evaluation", {})
     for section, details in evaluation.items():
-        if isinstance(details, dict):
-            yield f"evaluation.{section}.summary", details.get("summary")
+        if isinstance(details, dict) and "summary" in details:
+            yield f"evaluation.{section}.summary", details["summary"]
         elif section == "primary_drivers":
             for i, driver in enumerate(details):
                 yield f"evaluation.primary_drivers[{i}].influence", driver.get("influence")
-    rationale = pred.get("bet_rationale", {})
-    for i, selection in enumerate(rationale.get("selections", [])):
-        yield f"bet_rationale.selections[{i}].reason", selection.get("reason")
-    yield "bet_rationale.allocation", rationale.get("allocation")
-    yield "bet_rationale.total_units.reason", rationale.get("total_units", {}).get("reason")
-    for i, exclusion in enumerate(rationale.get("exclusions", [])):
-        yield f"bet_rationale.exclusions[{i}].reason", exclusion.get("reason")
-    yield "timing_rationale", pred.get("timing_rationale")
-    skip = pred.get("skip_analysis", {})
-    yield "skip_analysis.reason", skip.get("reason")
-    yield "skip_analysis.completed_analysis", skip.get("completed_analysis")
+    if pred.get("status") in ("PRE", "WAIT"):
+        rationale = pred.get("bet_rationale", {})
+        for i, selection in enumerate(rationale.get("selections", [])):
+            yield f"bet_rationale.selections[{i}].reason", selection.get("reason")
+        yield "bet_rationale.allocation", rationale.get("allocation")
+        yield "bet_rationale.total_units.reason", rationale.get("total_units", {}).get("reason")
+        for i, exclusion in enumerate(rationale.get("exclusions", [])):
+            yield f"bet_rationale.exclusions[{i}].reason", exclusion.get("reason")
+    if pred.get("status") == "PRE":
+        yield "timing_rationale", pred.get("timing_rationale")
+    if pred.get("status") == "SKIP":
+        skip = pred.get("skip_analysis", {})
+        yield "skip_analysis.reason", skip.get("reason")
+        yield "skip_analysis.completed_analysis", skip.get("completed_analysis")
 
 
 _NUMERIC_METHOD_RE = re.compile(

@@ -65,3 +65,10 @@ A separate `decision` record (`schemas/decision.schema.json`) references the loc
 **Bet sizing.** No fixed number of combinations or units. `bet_rationale` must explain each selected combination, the relative allocation, the total units and why alternatives were excluded. Bankroll stays independent of prediction. Do not claim calibrated probabilities or positive expected value without supporting evidence.
 
 **Knowledge.** Keep validated rules, working assumptions and unvalidated hypotheses distinct. Unvalidated heuristics are never added to `knowledge/validated/`; the review and learning lifecycle is unchanged.
+
+## Advisory prediction quality review
+`python -m onemark.validate` emits non-blocking quality warnings for protocol v1.1 predictions. When multiple prediction or lifecycle files are passed together, identical normalized explanation text used for different races is flagged for review. Numeric scoring, weights, or PRE/SKIP threshold language in explanations is also flagged so a reviewer can verify its basis in this protocol or validated knowledge. These checks do not decide whether a rationale is supported.
+
+PRE/WAIT warnings also remind reviewers to examine whether selected bets, excluded alternatives and unit allocation are explained for that race using its evidence. Required structure and text presence remain machine-checkable; whether an explanation is genuinely race-specific, sound, or evidence-supported requires human or AI review. The text scan can miss paraphrases and can flag legitimate repeated wording. Similar bet counts, unit totals or PRE/SKIP outcomes are not quality defects and are never rejected for being alike.
+
+Warnings do not modify records or affect IDs, canonical SHA-256 hashes, Revision references, or validation exit status. Review them alongside the prediction and its task/evidence before accepting the analysis; do not treat a clean scan as proof of quality. The established seven-step workflow and decision principles remain unchanged.
